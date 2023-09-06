@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "mystiko_crypto",
+    "mystiko_protocol"
+]
+resolver = "2"
+
+exclude = []
