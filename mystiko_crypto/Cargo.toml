@@ -3,8 +3,9 @@ name = "mystiko_crypto"
 version = "0.1.0"
 edition = "2021"
 
-#[build-dependencies]
-#cc = { version = "1.0.79" }
+[features]
+default = []
+zkp = ["dep:pest-ast", "dep:zokrates_common", "dep:zokrates_ast", "dep:zokrates_field", "dep:zokrates_interpreter", "dep:zokrates_abi", "dep:zokrates_proof_systems", "dep:zokrates_bellman"]
 
 [dependencies]
 ff = {package="ff_ce" , version="0.11", features = ["derive"]}
@@ -25,7 +26,7 @@ thiserror = { version = "1.0.38" }
 
 # Encryption
 aes = { version = "0.8.2" }
-babyjubjub-rs = { version = "0.0.10" }
+babyjubjub-rs = { version = "0.0.10", features = ["default"] }
 base64 = { version = "0.21.0" }
 cbc = { version = "0.1.2",features = ["std"]  }
 elliptic-curve = { version = "0.13.5", features = [ "ecdh" ]}
@@ -40,19 +41,22 @@ blake2 = { version = "0.10.6"}
 hmac = { version = "0.12.1"}
 md5 = { version = "0.7.0"}
 
-pest-ast = "=0.3.3"
-zokrates_common = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7" }
-zokrates_ast = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7" }
-zokrates_field = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", features = ["multicore"] }
-zokrates_interpreter = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7" }
-zokrates_abi = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7" }
-zokrates_proof_systems = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7" }
-zokrates_bellman = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", features = ["multicore"] }
+pest-ast = { version = "=0.3.3", optional = true }
+zokrates_common = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", optional = true }
+zokrates_ast = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", optional = true }
+zokrates_field = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", features = ["multicore"], optional = true }
+zokrates_interpreter = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", optional = true }
+zokrates_abi = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", optional = true }
+zokrates_proof_systems = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", optional = true }
+zokrates_bellman = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.7", features = ["multicore"], optional = true }
 
 [dev-dependencies]
 mystiko_fs = { git = "ssh://git@github.com/mystikonetwork/mystiko-backend.git", rev = "906cb0f" }
 tokio = { version = "1.26.0", features = ["macros", "rt", "full", "test-util"] }
 criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+babyjubjub-rs = { version = "0.0.10", features = ["aarch64"] }
 
 [[bench]]
 name = "mystiko_crypto_bench"

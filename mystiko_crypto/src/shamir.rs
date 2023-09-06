@@ -1,6 +1,6 @@
 use crate::constants::FIELD_SIZE;
 use crate::error::SecretShareError;
-use crate::num_traits::One;
+use num_traits::One;
 use crate::utils::{mod_floor, random_biguint};
 use anyhow::Result;
 use num_bigint::{BigInt, BigUint, ToBigInt};

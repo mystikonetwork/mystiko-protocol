@@ -1,5 +1,5 @@
 use crate::error::ProtocolError;
-use crate::mystiko_crypto::zkp::proof::ZKProof;
+use mystiko_crypto::zkp::proof::ZKProof;
 use anyhow::Result;
 use mystiko_crypto::constants::FIELD_SIZE;
 use mystiko_crypto::hash::keccak256;
