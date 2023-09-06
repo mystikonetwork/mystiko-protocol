@@ -1,10 +1,10 @@
 use crate::error::ProtocolError;
-use crate::mystiko_crypto::zkp::proof::ZKProof;
 use anyhow::Result;
 use mystiko_crypto::constants::FIELD_SIZE;
 use mystiko_crypto::hash::keccak256;
 use mystiko_crypto::merkle_tree::MerkleTree;
 use mystiko_crypto::utils::{biguint_to_be_32_bytes, mod_floor};
+use mystiko_crypto::zkp::proof::ZKProof;
 use num_bigint::BigUint;
 
 #[derive(Debug)]

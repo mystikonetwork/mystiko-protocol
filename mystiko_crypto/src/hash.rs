@@ -4,6 +4,7 @@ use crate::utils::mod_floor;
 use blake2::Blake2b512;
 use ff::PrimeField;
 use hmac::{Hmac, Mac};
+use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use poseidon_rs::{Fr, Poseidon};
 use sha2::{Sha256, Sha512};

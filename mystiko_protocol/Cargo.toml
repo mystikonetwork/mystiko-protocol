@@ -25,7 +25,7 @@ babyjubjub-rs = { version = "0.0.10", features = ["default"] }
 k256 = { version = "0.13.1" }
 
 # mystiko
-mystiko_crypto = { version = "0.1.0", path = "../mystiko_crypto" }
+mystiko_crypto = { version = "0.1.0", path = "../mystiko_crypto", features = ["zkp"] }
 
 [dev-dependencies]
 ethers-core  = { version = "2.0.4" }

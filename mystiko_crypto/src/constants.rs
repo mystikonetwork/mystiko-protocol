@@ -1,4 +1,5 @@
 use ff::hex;
+use lazy_static::lazy_static;
 use num_bigint::BigUint;
 
 pub const KDF_MAGIC_DATA_LENGTH: usize = 8;
