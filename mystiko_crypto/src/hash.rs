@@ -4,11 +4,11 @@ use crate::utils::mod_floor;
 use blake2::Blake2b512;
 use ff::PrimeField;
 use hmac::{Hmac, Mac};
+use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use poseidon_rs::{Fr, Poseidon};
 use sha2::{Sha256, Sha512};
 use sha3::{Digest, Keccak256};
-use lazy_static::lazy_static;
 
 lazy_static! {
     static ref G_POSEIDON_INSTANCE: Poseidon = Poseidon::new();
