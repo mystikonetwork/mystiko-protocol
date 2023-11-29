@@ -131,12 +131,12 @@ impl ZKProof {
     ) -> Result<Self, ZkpError> {
         let abi: Abi = serde_json::from_slice(abi_spec)?;
         let cursor = Cursor::new(program);
-        let prog = match ir::ProgEnum::deserialize(cursor) {
+        let program = match ir::ProgEnum::deserialize(cursor) {
             Ok(p) => p.collect(),
             Err(err) => return Err(ZkpError::DeserializeProgramError(err)),
         };
 
-        let p = match prog {
+        let p = match program {
             ProgEnum::Bn128Program(p) => p,
             _ => return Err(ZkpError::NotSupport),
         };

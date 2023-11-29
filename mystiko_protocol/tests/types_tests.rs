@@ -1,6 +1,3 @@
-extern crate mystiko_protocol;
-extern crate num_bigint;
-
 use num_bigint::BigUint;
 
 use mystiko_protocol::commitment::Note;

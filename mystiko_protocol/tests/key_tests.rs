@@ -1,7 +1,3 @@
-extern crate mystiko_crypto;
-extern crate mystiko_protocol;
-extern crate num_bigint;
-
 use mystiko_protocol::key::{
     combined_public_key, combined_secret_key, encryption_public_key, encryption_secret_key, full_public_key,
     separate_public_keys, separate_secret_keys, verification_public_key, verification_secret_key,

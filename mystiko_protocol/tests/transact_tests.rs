@@ -1,33 +1,21 @@
-extern crate ethers_core;
-extern crate ethers_signers;
-extern crate mystiko_crypto;
-extern crate mystiko_fs;
-extern crate mystiko_protocol;
-extern crate num_bigint;
-extern crate num_traits;
-
-use std::ops::Sub;
-
 use ethers_core::rand::thread_rng;
 use ethers_core::types::U256;
 use ethers_signers::{LocalWallet, Signer};
-use num_bigint::BigUint;
-use num_traits::identities::Zero;
-
 use mystiko_crypto::ecies;
 use mystiko_crypto::merkle_tree::MerkleTree;
 use mystiko_crypto::utils::random_bytes;
 use mystiko_fs::{read_file_bytes, read_gzip_file_bytes};
 use mystiko_protocol::address::ShieldedAddress;
-use mystiko_protocol::commitment::{Commitment, EncryptedNote, Note};
+use mystiko_protocol::commitment::{Commitment, Note};
 use mystiko_protocol::key::{
     encryption_public_key, encryption_secret_key, verification_public_key, verification_secret_key,
 };
-use mystiko_protocol::transact::Transaction;
-use mystiko_protocol::types::{
-    AuditingPk, EncPk, EncSk, RandomSk, SigPk, TxAmount, VerifyPk, VerifySk, NUM_OF_AUDITORS,
-};
+use mystiko_protocol::transact::{Transaction, TransactionCommitmentInput, TransactionCommitmentOutput};
+use mystiko_protocol::types::{AuditingPk, SigPk, NUM_OF_AUDITORS};
 use mystiko_protocol::types::{ENC_SK_SIZE, MERKLE_TREE_LEVELS, VERIFY_SK_SIZE};
+use num_bigint::BigUint;
+use num_traits::identities::Zero;
+use std::ops::Sub;
 
 fn generate_eth_address() -> SigPk {
     let wallet = LocalWallet::new(&mut thread_rng());
@@ -49,79 +37,79 @@ fn generate_transaction(
     proving_key: Vec<u8>,
     generate_auditing_key: Option<bool>,
 ) -> Transaction {
-    let mut in_verify_pks: Vec<VerifyPk> = vec![];
-    let mut in_verify_sks: Vec<VerifySk> = vec![];
-    let mut in_enc_pks: Vec<EncPk> = vec![];
-    let mut in_enc_sks: Vec<EncSk> = vec![];
-    let mut in_amounts: Vec<TxAmount> = vec![];
-    let mut in_commitments: Vec<BigUint> = vec![];
-    let mut in_private_notes: Vec<EncryptedNote> = vec![];
-
     let in_amount = u256_to_big_int(&ethers_core::utils::parse_ether("200").unwrap());
     let out_amount = u256_to_big_int(&ethers_core::utils::parse_ether("50").unwrap());
     let rollup_fee_amount = u256_to_big_int(&ethers_core::utils::parse_ether("10").unwrap());
     let relayer_fee_amount = u256_to_big_int(&ethers_core::utils::parse_ether("20").unwrap());
 
-    for i in 0..num_inputs as usize {
+    let mut inputs = vec![];
+    let mut in_amounts = vec![];
+    for _ in 0..num_inputs as usize {
         let raw_verify_sk = random_bytes(VERIFY_SK_SIZE);
         let raw_enc_sk = random_bytes(ENC_SK_SIZE);
-        in_verify_sks.push(verification_secret_key(raw_verify_sk.as_slice().try_into().unwrap()));
-        in_verify_pks.push(verification_public_key(raw_verify_sk.as_slice().try_into().unwrap()));
-        in_enc_sks.push(encryption_secret_key(raw_enc_sk.as_slice().try_into().unwrap()));
-        in_enc_pks.push(encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap()));
-        in_amounts.push(in_amount.clone());
-
+        let sk_verify = verification_secret_key(raw_verify_sk.as_slice().try_into().unwrap());
+        let pk_verify = verification_public_key(raw_verify_sk.as_slice().try_into().unwrap());
+        let sk_enc = encryption_secret_key(raw_enc_sk.as_slice().try_into().unwrap());
+        let pk_enc = encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap());
         let cm = Commitment::new(
-            ShieldedAddress::from_public_key(&in_verify_pks[i], &in_enc_pks[i]),
-            Some(Note::new(Some(in_amounts[i].clone()), None)),
+            ShieldedAddress::from_public_key(&pk_verify, &pk_enc),
+            Some(Note::new(Some(in_amount.clone()), None)),
+            None,
+        )
+        .unwrap();
+        in_amounts.push(in_amount.clone());
+        inputs.push(
+            TransactionCommitmentInput::builder()
+                .commitment(cm.commitment_hash)
+                .private_note(cm.encrypted_note)
+                .path_elements(vec![])
+                .path_indices(vec![])
+                .pk_verify(pk_verify)
+                .sk_verify(sk_verify)
+                .pk_enc(pk_enc)
+                .sk_enc(sk_enc)
+                .build(),
+        );
+    }
+    let in_commitments = inputs.iter().map(|x| x.commitment.clone()).collect();
+    let merkle_tree = MerkleTree::new(Some(in_commitments), Some(MERKLE_TREE_LEVELS), None).unwrap();
+    for (i, input) in inputs.iter_mut().enumerate().take(num_inputs as usize) {
+        let path = merkle_tree.path(i).unwrap();
+        input.path_elements = path.0;
+        input.path_indices = path.1;
+    }
+
+    let mut out_amounts = vec![];
+    let mut rollup_fee_amounts = vec![];
+    let mut outputs = vec![];
+    for _ in 0..num_outputs as usize {
+        let raw_verify_sk = random_bytes(VERIFY_SK_SIZE);
+        let raw_enc_sk = random_bytes(ENC_SK_SIZE);
+        let pk_verify = verification_public_key(raw_verify_sk.as_slice().try_into().unwrap());
+        let pk_enc = encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap());
+        let cm = Commitment::new(
+            ShieldedAddress::from_public_key(&pk_verify, &pk_enc),
+            Some(Note::new(Some(out_amount.clone()), None)),
             None,
         )
         .unwrap();
 
-        in_commitments.push(cm.commitment_hash.clone());
-        in_private_notes.push(cm.encrypted_note);
-    }
-
-    let merkle_tree = MerkleTree::new(Some(in_commitments.clone()), Some(MERKLE_TREE_LEVELS), None).unwrap();
-    let mut path_elements: Vec<Vec<BigUint>> = vec![];
-    let mut path_indices: Vec<Vec<usize>> = vec![];
-    for i in 0..num_inputs as usize {
-        let path = merkle_tree.path(i).unwrap();
-        path_elements.push(path.0);
-        path_indices.push(path.1);
+        out_amounts.push(out_amount.clone());
+        rollup_fee_amounts.push(rollup_fee_amount.clone());
+        outputs.push(
+            TransactionCommitmentOutput::builder()
+                .commitment(cm.commitment_hash.clone())
+                .pk_verify(pk_verify)
+                .amount(out_amount.clone())
+                .random_p(cm.note.random_p)
+                .random_r(cm.note.random_r)
+                .random_s(cm.note.random_s)
+                .rollup_fee_amount(rollup_fee_amount.clone())
+                .build(),
+        )
     }
 
     let sig_pk = generate_eth_address();
-
-    let mut out_verify_pks: Vec<VerifyPk> = vec![];
-    let mut out_enc_pks: Vec<EncPk> = vec![];
-    let mut rollup_fee_amounts: Vec<TxAmount> = vec![];
-    let mut out_amounts: Vec<TxAmount> = vec![];
-    let mut out_commitments: Vec<BigUint> = vec![];
-    let mut out_random_ps: Vec<RandomSk> = vec![];
-    let mut out_random_rs: Vec<RandomSk> = vec![];
-    let mut out_random_ss: Vec<RandomSk> = vec![];
-
-    for i in 0..num_outputs as usize {
-        let raw_verify_sk = random_bytes(VERIFY_SK_SIZE);
-        let raw_enc_sk = random_bytes(ENC_SK_SIZE);
-        out_verify_pks.push(verification_public_key(raw_verify_sk.as_slice().try_into().unwrap()));
-        out_enc_pks.push(encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap()));
-        out_amounts.push(out_amount.clone());
-        rollup_fee_amounts.push(rollup_fee_amount.clone());
-
-        let cm = Commitment::new(
-            ShieldedAddress::from_public_key(&out_verify_pks[i], &out_enc_pks[i]),
-            Some(Note::new(Some(out_amounts[i].clone()), None)),
-            None,
-        )
-        .unwrap();
-
-        out_commitments.push(cm.commitment_hash.clone());
-        out_random_ps.push(cm.note.random_p);
-        out_random_rs.push(cm.note.random_r);
-        out_random_ss.push(cm.note.random_s);
-    }
 
     let total_in = in_amounts.iter().fold(BigUint::zero(), |acc, x| acc + x);
     let total_out = out_amounts.iter().fold(BigUint::zero(), |acc, x| acc + x);
@@ -145,32 +133,17 @@ fn generate_transaction(
     }
 
     Transaction::builder()
-        .num_inputs(num_inputs)
-        .num_outputs(num_outputs)
-        .in_verify_pks(in_verify_pks)
-        .in_verify_sks(in_verify_sks)
-        .in_enc_pks(in_enc_pks)
-        .in_enc_sks(in_enc_sks)
-        .in_commitments(in_commitments)
-        .in_private_notes(in_private_notes)
-        .path_indices(path_indices)
-        .path_elements(path_elements)
-        .sig_pk(sig_pk)
+        .inputs(inputs)
+        .outputs(outputs)
         .tree_root(merkle_tree.root())
+        .sig_pk(sig_pk)
         .public_amount(public_amount)
         .relayer_fee_amount(relayer_fee_amount)
-        .rollup_fee_amounts(rollup_fee_amounts)
-        .out_verify_pks(out_verify_pks)
-        .out_amounts(out_amounts)
-        .out_commitments(out_commitments)
-        .out_random_ps(out_random_ps)
-        .out_random_rs(out_random_rs)
-        .out_random_ss(out_random_ss)
+        .random_auditing_secret_key(random_auditing_secret_key)
+        .auditor_public_keys(auditor_public_keys.clone())
         .program(program)
         .abi(abi)
         .proving_key(proving_key)
-        .random_auditing_secret_key(random_auditing_secret_key)
-        .auditor_public_keys(auditor_public_keys)
         .build()
 }
 
@@ -195,6 +168,7 @@ async fn test_transaction1x0() {
 
     let proof = tx.prove().unwrap();
     let verify = proof
+        .proof
         .verify(
             read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x0.vkey.gz"))
                 .await
@@ -224,6 +198,7 @@ async fn test_transaction1x1() {
 
     let proof = tx.prove().unwrap();
     let verify = proof
+        .proof
         .verify(
             read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x1.vkey.gz"))
                 .await
@@ -253,6 +228,7 @@ async fn test_transaction1x2() {
 
     let proof = tx.prove().unwrap();
     let verify = proof
+        .proof
         .verify(
             read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x2.vkey.gz"))
                 .await
@@ -282,6 +258,7 @@ async fn test_transaction2x0() {
 
     let proof = tx.prove().unwrap();
     let verify = proof
+        .proof
         .verify(
             read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x0.vkey.gz"))
                 .await
@@ -311,6 +288,7 @@ async fn test_transaction2x1() {
 
     let proof = tx.prove().unwrap();
     let verify = proof
+        .proof
         .verify(
             read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x1.vkey.gz"))
                 .await
@@ -340,6 +318,7 @@ async fn test_transaction2x2() {
 
     let proof = tx.prove().unwrap();
     let verify = proof
+        .proof
         .verify(
             read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x2.vkey.gz"))
                 .await

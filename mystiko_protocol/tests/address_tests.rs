@@ -1,7 +1,3 @@
-extern crate mystiko_crypto;
-extern crate mystiko_protocol;
-extern crate num_bigint;
-
 use mystiko_protocol::address::ShieldedAddress;
 use mystiko_protocol::error::ProtocolError;
 use mystiko_protocol::types::{ENC_PK_SIZE, VERIFY_PK_SIZE};

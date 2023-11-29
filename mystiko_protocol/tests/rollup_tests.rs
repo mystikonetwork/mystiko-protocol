@@ -1,7 +1,3 @@
-extern crate mystiko_crypto;
-extern crate mystiko_protocol;
-extern crate num_bigint;
-
 use num_bigint::BigUint;
 
 use mystiko_crypto::merkle_tree::MerkleTree;
