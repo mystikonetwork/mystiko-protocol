@@ -15,7 +15,7 @@ async fn test_secret_key_for_verification() {
         125, 197, 58, 86, 95, 32, 15,
     ];
 
-    let vk = verification_secret_key(&raw_key);
+    let vk = verification_secret_key(&raw_key).unwrap();
     assert_eq!(vk, expect_vk);
 }
 
@@ -29,7 +29,7 @@ async fn test_public_key_for_verification() {
         247, 30, 120, 219, 84, 207, 18, 27,
     ];
 
-    let vk = verification_public_key(&raw_key);
+    let vk = verification_public_key(&raw_key).unwrap();
     assert_eq!(vk, expect_sk);
 }
 
@@ -51,7 +51,7 @@ async fn test_public_key_for_encryption() {
         2, 177, 145, 47, 171, 168, 15, 206, 205, 42, 100, 197, 116, 254, 254, 66, 44, 97, 16, 96, 1, 236, 88, 138, 241,
         189, 157, 117, 72, 184, 16, 100, 203,
     ];
-    let pk = encryption_public_key(&raw_key);
+    let pk = encryption_public_key(&raw_key).unwrap();
     assert_eq!(pk, expect_pk);
 }
 
@@ -75,7 +75,7 @@ async fn test_full_and_separate_public_key() {
     let combine = combined_public_key(&vk, &ek);
     assert_eq!(combine, expect_combine);
 
-    let (vk_s, ek_s) = separate_public_keys(&combine);
+    let (vk_s, ek_s) = separate_public_keys(&combine).unwrap();
     assert_eq!(vk, vk_s);
     assert_eq!(ek, ek_s);
 }
@@ -99,7 +99,7 @@ async fn test_full_and_separate_secret_key() {
     let combine = combined_secret_key(&vk, &ek);
     assert_eq!(combine, expect_combine);
 
-    let (vk_s, ek_s) = separate_secret_keys(&combine);
+    let (vk_s, ek_s) = separate_secret_keys(&combine).unwrap();
     assert_eq!(vk, vk_s);
     assert_eq!(ek, ek_s);
 }
@@ -111,7 +111,7 @@ fn test_full_public_key() {
         125, 197, 58, 86, 95, 32, 15, 2, 177, 145, 47, 171, 168, 15, 206, 205, 42, 100, 197, 116, 254, 254, 66, 44, 97,
         16, 96, 1, 236, 88, 138, 241, 189, 157, 117, 72, 184, 16, 0,
     ];
-    let pk = full_public_key(&sk);
+    let pk = full_public_key(&sk).unwrap();
     let expected_pk: FullPk = [
         196, 97, 135, 198, 156, 38, 197, 58, 149, 152, 118, 34, 141, 10, 140, 241, 2, 85, 56, 20, 62, 178, 69, 65, 241,
         177, 226, 216, 83, 0, 47, 36, 2, 31, 18, 42, 100, 132, 197, 170, 102, 9, 124, 54, 10, 251, 40, 149, 143, 149,

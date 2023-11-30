@@ -17,7 +17,7 @@ async fn test_decrypt_asymmetric_compatible_with_js() {
 async fn test_random_encrypt_asymmetric() {
     let raw_sk = random_bytes(32);
     let sk = encryption_secret_key(raw_sk.as_slice().try_into().unwrap());
-    let pk = encryption_public_key(raw_sk.as_slice().try_into().unwrap());
+    let pk = encryption_public_key(raw_sk.as_slice().try_into().unwrap()).unwrap();
     let plain_text = random_bytes(80);
     let enc_data = encrypt_asymmetric(&pk, plain_text.as_slice()).unwrap();
     let dec_data = decrypt_asymmetric(&sk, enc_data.as_slice()).unwrap();

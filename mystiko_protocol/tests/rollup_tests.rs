@@ -24,7 +24,13 @@ async fn test_rollup1() {
         .unwrap();
 
     assert_eq!(tree.count(), in_initial_elements_count);
-    let mut rollup = Rollup::new(&mut tree, new_leaves, program, abi, pkey);
+    let mut rollup = Rollup::builder()
+        .tree(&mut tree)
+        .new_leaves(new_leaves)
+        .program(program)
+        .abi(abi)
+        .proving_key(pkey)
+        .build();
 
     let r = rollup.prove().unwrap();
     let verify = r
@@ -58,7 +64,13 @@ async fn test_rollup2() {
         .unwrap();
 
     assert_eq!(tree.count(), in_initial_elements_count);
-    let mut rollup = Rollup::new(&mut tree, new_leaves, program, abi, pkey);
+    let mut rollup = Rollup::builder()
+        .tree(&mut tree)
+        .new_leaves(new_leaves)
+        .program(program)
+        .abi(abi)
+        .proving_key(pkey)
+        .build();
     let r = rollup.prove().unwrap();
     let verify = r
         .zk_proof
@@ -94,7 +106,13 @@ async fn test_rollup4() {
         .unwrap();
 
     assert_eq!(tree.count(), in_initial_elements_count);
-    let mut rollup = Rollup::new(&mut tree, new_leaves, program, abi, pkey);
+    let mut rollup = Rollup::builder()
+        .tree(&mut tree)
+        .new_leaves(new_leaves)
+        .program(program)
+        .abi(abi)
+        .proving_key(pkey)
+        .build();
     let r = rollup.prove().unwrap();
     let verify = r
         .zk_proof
@@ -130,7 +148,13 @@ async fn test_rollup8() {
         .unwrap();
 
     assert_eq!(tree.count(), in_initial_elements_count);
-    let mut rollup = Rollup::new(&mut tree, new_leaves, program, abi, pkey);
+    let mut rollup = Rollup::builder()
+        .tree(&mut tree)
+        .new_leaves(new_leaves)
+        .program(program)
+        .abi(abi)
+        .proving_key(pkey)
+        .build();
     let r = rollup.prove().unwrap();
     let verify = r
         .zk_proof
@@ -166,7 +190,13 @@ async fn test_rollup16() {
         .unwrap();
 
     assert_eq!(tree.count(), in_initial_elements_count);
-    let mut rollup = Rollup::new(&mut tree, new_leaves, program, abi, pkey);
+    let mut rollup = Rollup::builder()
+        .tree(&mut tree)
+        .new_leaves(new_leaves)
+        .program(program)
+        .abi(abi)
+        .proving_key(pkey)
+        .build();
     let r = rollup.prove().unwrap();
     let verify = r
         .zk_proof

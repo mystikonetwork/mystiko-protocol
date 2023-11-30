@@ -47,13 +47,13 @@ fn generate_transaction(
     for _ in 0..num_inputs as usize {
         let raw_verify_sk = random_bytes(VERIFY_SK_SIZE);
         let raw_enc_sk = random_bytes(ENC_SK_SIZE);
-        let sk_verify = verification_secret_key(raw_verify_sk.as_slice().try_into().unwrap());
-        let pk_verify = verification_public_key(raw_verify_sk.as_slice().try_into().unwrap());
+        let sk_verify = verification_secret_key(raw_verify_sk.as_slice().try_into().unwrap()).unwrap();
+        let pk_verify = verification_public_key(raw_verify_sk.as_slice().try_into().unwrap()).unwrap();
         let sk_enc = encryption_secret_key(raw_enc_sk.as_slice().try_into().unwrap());
-        let pk_enc = encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap());
+        let pk_enc = encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap()).unwrap();
         let cm = Commitment::new(
             ShieldedAddress::from_public_key(&pk_verify, &pk_enc),
-            Some(Note::new(Some(in_amount.clone()), None)),
+            Some(Note::new(Some(in_amount.clone()), None).unwrap()),
             None,
         )
         .unwrap();
@@ -85,11 +85,11 @@ fn generate_transaction(
     for _ in 0..num_outputs as usize {
         let raw_verify_sk = random_bytes(VERIFY_SK_SIZE);
         let raw_enc_sk = random_bytes(ENC_SK_SIZE);
-        let pk_verify = verification_public_key(raw_verify_sk.as_slice().try_into().unwrap());
-        let pk_enc = encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap());
+        let pk_verify = verification_public_key(raw_verify_sk.as_slice().try_into().unwrap()).unwrap();
+        let pk_enc = encryption_public_key(raw_enc_sk.as_slice().try_into().unwrap()).unwrap();
         let cm = Commitment::new(
             ShieldedAddress::from_public_key(&pk_verify, &pk_enc),
-            Some(Note::new(Some(out_amount.clone()), None)),
+            Some(Note::new(Some(out_amount.clone()), None).unwrap()),
             None,
         )
         .unwrap();

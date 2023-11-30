@@ -1,7 +1,7 @@
-use crate::error::ProtocolError;
+use crate::error::{ProtocolError, ProtocolKeyError};
 use crate::key::combined_public_key;
 use crate::types::{EncPk, FullPk, VerifyPk};
-use crate::types::{ENC_PK_SIZE, FULL_PK_SIZE, VERIFY_PK_SIZE};
+use crate::types::{FULL_PK_SIZE, VERIFY_PK_SIZE};
 use bs58;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -23,7 +23,7 @@ impl ShieldedAddress {
 
     pub fn from_string(addr: &str) -> Result<Self, ProtocolError> {
         if !ShieldedAddress::is_valid_address(addr) {
-            return Err(ProtocolError::InvalidShieldedAddress);
+            return Err(ProtocolError::InvalidShieldedAddressError);
         }
 
         Ok(Self { addr: addr.to_string() })
@@ -38,14 +38,21 @@ impl ShieldedAddress {
         ShieldedAddress::from_full_public_key(&combined_public_key(pk_verify, pk_enc))
     }
 
-    pub fn public_key(&self) -> (VerifyPk, EncPk) {
-        let ck = bs58::decode(self.addr.as_str()).into_vec().unwrap();
-        let ck = ck.as_slice();
-        assert_eq!(ck.len(), FULL_PK_SIZE);
-        let mut vk = [0u8; VERIFY_PK_SIZE];
-        let mut ek = [0u8; ENC_PK_SIZE];
-        vk.copy_from_slice(&ck[0..VERIFY_PK_SIZE]);
-        ek.copy_from_slice(&ck[VERIFY_PK_SIZE..]);
-        (vk, ek)
+    pub fn public_key(&self) -> Result<(VerifyPk, EncPk), ProtocolError> {
+        let ck = bs58::decode(self.addr.as_str())
+            .into_vec()
+            .map_err(|_| ProtocolError::InvalidShieldedAddressError)?;
+        if ck.len() != FULL_PK_SIZE {
+            return Err(ProtocolError::InvalidShieldedAddressError);
+        }
+        let vk = &ck[0..VERIFY_PK_SIZE];
+        let ek = &ck[VERIFY_PK_SIZE..];
+        let vk: VerifyPk = vk
+            .try_into()
+            .map_err(|_| ProtocolKeyError::ImportVerifyPublicKeyError)?;
+        let ek: EncPk = ek
+            .try_into()
+            .map_err(|_| ProtocolKeyError::ImportEncryptPublicKeyError)?;
+        Ok((vk, ek))
     }
 }
