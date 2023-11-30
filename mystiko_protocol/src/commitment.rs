@@ -1,5 +1,5 @@
 use crate::address::ShieldedAddress;
-use crate::error::ProtocolError;
+use crate::error::{ProtocolError, ProtocolKeyError};
 use crate::types::TxAmount;
 use crate::types::{EncSk, RandomSk, DECRYPTED_NOTE_SIZE, RANDOM_SK_SIZE};
 use anyhow::Result;
@@ -8,6 +8,7 @@ use mystiko_crypto::hash::poseidon;
 use mystiko_crypto::utils::{biguint_to_32_bytes, random_bytes};
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
+use typed_builder::TypedBuilder;
 
 pub type EncryptedNote = Vec<u8>;
 
@@ -17,12 +18,13 @@ pub struct EncryptedData {
     pub encrypted_note: EncryptedNote,
 }
 
-fn generate_random_sk() -> RandomSk {
+fn generate_random_sk() -> Result<RandomSk, ProtocolError> {
     let sk = random_bytes(RANDOM_SK_SIZE);
-    sk.try_into().unwrap()
+    sk.try_into()
+        .map_err(|_| ProtocolKeyError::GenerateNoteRandomSecretKeyError.into())
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, TypedBuilder)]
 pub struct Note {
     pub random_p: RandomSk,
     pub random_r: RandomSk,
@@ -31,19 +33,19 @@ pub struct Note {
 }
 
 impl Note {
-    pub fn new(amount: Option<BigUint>, r: Option<(RandomSk, RandomSk, RandomSk)>) -> Self {
+    pub fn new(amount: Option<BigUint>, r: Option<(RandomSk, RandomSk, RandomSk)>) -> Result<Self, ProtocolError> {
         let amount = amount.unwrap_or(BigUint::zero());
         let (random_p, random_r, random_s) = match r {
             Some(r) => (r.0, r.1, r.2),
-            None => (generate_random_sk(), generate_random_sk(), generate_random_sk()),
+            None => (generate_random_sk()?, generate_random_sk()?, generate_random_sk()?),
         };
 
-        Self {
-            random_p,
-            random_r,
-            random_s,
-            amount,
-        }
+        Ok(Self::builder()
+            .random_p(random_p)
+            .random_r(random_r)
+            .random_s(random_s)
+            .amount(amount)
+            .build())
     }
 
     pub fn to_vec(&self) -> Vec<u8> {
@@ -58,20 +60,20 @@ impl Note {
 
     pub fn from_vec(note_bytes: Vec<u8>) -> Result<Self, ProtocolError> {
         if note_bytes.len() != DECRYPTED_NOTE_SIZE {
-            return Err(ProtocolError::InvalidNoteSize);
+            return Err(ProtocolError::InvalidNoteSizeError);
         }
 
         let mut chunks = note_bytes.chunks(RANDOM_SK_SIZE);
-        let random_p = chunks.next().unwrap();
-        let random_r = chunks.next().unwrap();
-        let random_s = chunks.next().unwrap();
-        let amount = chunks.next().unwrap();
+        let random_p = chunks.next().ok_or(ProtocolError::InvalidNoteFormatError)?;
+        let random_r = chunks.next().ok_or(ProtocolError::InvalidNoteFormatError)?;
+        let random_s = chunks.next().ok_or(ProtocolError::InvalidNoteFormatError)?;
+        let amount = chunks.next().ok_or(ProtocolError::InvalidNoteFormatError)?;
         let amount = BigUint::from_bytes_le(amount);
 
         Ok(Self {
-            random_p: random_p.try_into().unwrap(),
-            random_r: random_r.try_into().unwrap(),
-            random_s: random_s.try_into().unwrap(),
+            random_p: random_p.try_into().map_err(|_| ProtocolError::InvalidNoteFormatError)?,
+            random_r: random_r.try_into().map_err(|_| ProtocolError::InvalidNoteFormatError)?,
+            random_s: random_s.try_into().map_err(|_| ProtocolError::InvalidNoteFormatError)?,
             amount,
         })
     }
@@ -104,12 +106,12 @@ impl Commitment {
         note: Option<Note>,
         encrypted_note: Option<EncryptedData>,
     ) -> Result<Self, ProtocolError> {
-        let (pk_verify, pk_enc) = shielded_address.public_key();
+        let (pk_verify, pk_enc) = shielded_address.public_key()?;
         let note = if let Some(n) = encrypted_note {
             let data = decrypt_asymmetric(&n.sk_enc, &n.encrypted_note)?;
             Note::from_vec(data)?
         } else {
-            note.unwrap_or(Note::new(None, None))
+            note.unwrap_or(Note::new(None, None)?)
         };
 
         let shielded_address = ShieldedAddress::from_public_key(&pk_verify, &pk_enc);

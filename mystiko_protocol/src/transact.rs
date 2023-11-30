@@ -62,7 +62,7 @@ impl Transaction {
             .iter()
             .map(|pk| {
                 let (unpacked_key_x, unpacked_key_y) = ecies::unpack_public_key(pk);
-                AuditingPublicKey::builder()
+                AuditingUnpackedPublicKey::builder()
                     .x_signs(is_neg(&unpacked_key_x))
                     .x(unpacked_key_x)
                     .y(unpacked_key_y)
@@ -71,14 +71,15 @@ impl Transaction {
             .collect::<Vec<_>>();
         AuditingKeys::builder()
             .random_sk(random_auditing_sk)
-            .random_pk(
-                AuditingPublicKey::builder()
+            .random_pk(random_auditing_pk)
+            .random_unpacked_pk(
+                AuditingUnpackedPublicKey::builder()
                     .x_signs(is_neg(&unpacked_random_k_x))
                     .x(unpacked_random_k_x)
                     .y(unpacked_random_k_y)
                     .build(),
             )
-            .auditor(keys)
+            .auditors(keys)
             .build()
     }
 }
@@ -114,6 +115,7 @@ pub struct TransactionZKInput {
     pub out_public_key: Vec<BigUint>,
     pub random_public_key_x: BigUint,
     pub auditor_public_key_xs: Vec<BigUint>,
+    pub random_public_key: BigUint,
     pub random_secret_key: BigUint,
     pub coefficients: Vec<Vec<BigUint>>,
     pub in_commitment_shares: Vec<Vec<BigUint>>,
@@ -142,10 +144,10 @@ impl TransactionZKInput {
             relayer_fee_amount: t.relayer_fee_amount.clone(),
             out_commitments: clone_biguint_vec(&t.outputs, |o| o.commitment.clone()),
             out_rollup_fee_amounts: clone_biguint_vec(&t.outputs, |o| o.rollup_fee_amount.clone()),
-            random_public_key_x_signs: auditing_keys.random_pk.x_signs,
-            random_public_key_y: BigUint::from_bytes_le(&auditing_keys.random_pk.y),
-            auditor_public_key_x_signs: auditing_keys.auditor.iter().map(|k| k.x_signs).collect(),
-            auditor_public_key_ys: clone_biguint_vec(&auditing_keys.auditor, |k| BigUint::from_bytes_le(&k.y)),
+            random_public_key_x_signs: auditing_keys.random_unpacked_pk.x_signs,
+            random_public_key_y: BigUint::from_bytes_le(&auditing_keys.random_unpacked_pk.y),
+            auditor_public_key_x_signs: auditing_keys.auditors.iter().map(|k| k.x_signs).collect(),
+            auditor_public_key_ys: clone_biguint_vec(&auditing_keys.auditors, |k| BigUint::from_bytes_le(&k.y)),
             encrypted_commitment_shares: shares.iter().map(|s| &s.encrypted_shares).cloned().collect(),
             in_commitments: clone_biguint_vec(&t.inputs, |i| i.commitment.clone()),
             in_amounts: clone_biguint_vec(&input_details, |i| i.amount.clone()),
@@ -161,8 +163,9 @@ impl TransactionZKInput {
             out_random_r: clone_biguint_vec(&t.outputs, |o| BigUint::from_bytes_le(&o.random_r)),
             out_random_s: clone_biguint_vec(&t.outputs, |o| BigUint::from_bytes_le(&o.random_s)),
             out_public_key: clone_biguint_vec(&t.outputs, |o| BigUint::from_bytes_le(&o.pk_verify)),
-            random_public_key_x: BigUint::from_bytes_le(&auditing_keys.random_pk.x),
-            auditor_public_key_xs: clone_biguint_vec(&auditing_keys.auditor, |k| BigUint::from_bytes_le(&k.x)),
+            random_public_key_x: BigUint::from_bytes_le(&auditing_keys.random_unpacked_pk.x),
+            auditor_public_key_xs: clone_biguint_vec(&auditing_keys.auditors, |k| BigUint::from_bytes_le(&k.x)),
+            random_public_key: BigUint::from_bytes_le(&auditing_keys.random_pk),
             random_secret_key: BigUint::from_bytes_le(&auditing_keys.random_sk),
             coefficients: shares.iter().map(|s| s.coefficient.clone()).collect(),
             in_commitment_shares: shares.iter().map(|s| s.shares.clone()).collect(),
@@ -288,12 +291,13 @@ struct TransactionCommitmentShares {
 #[derive(Debug, Clone, TypedBuilder)]
 struct AuditingKeys {
     pub random_sk: AuditingSk,
-    pub random_pk: AuditingPublicKey,
-    pub auditor: Vec<AuditingPublicKey>,
+    pub random_pk: AuditingPk,
+    pub random_unpacked_pk: AuditingUnpackedPublicKey,
+    pub auditors: Vec<AuditingUnpackedPublicKey>,
 }
 
 #[derive(Debug, Clone, TypedBuilder)]
-struct AuditingPublicKey {
+struct AuditingUnpackedPublicKey {
     pub x_signs: bool,
     pub x: AuditingPk,
     pub y: AuditingPk,

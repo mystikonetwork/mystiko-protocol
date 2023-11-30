@@ -7,8 +7,9 @@ use mystiko_crypto::utils::{biguint_to_be_32_bytes, mod_floor};
 use mystiko_crypto::zkp::proof::ZKProof;
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
+use typed_builder::TypedBuilder;
 
-#[derive(Debug)]
+#[derive(Debug, TypedBuilder)]
 pub struct Rollup<'a> {
     tree: &'a mut MerkleTree,
     new_leaves: Vec<BigUint>,
@@ -17,7 +18,7 @@ pub struct Rollup<'a> {
     proving_key: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TypedBuilder)]
 pub struct RollupProof {
     pub zk_proof: ZKProof,
     pub new_root: BigUint,
@@ -25,22 +26,6 @@ pub struct RollupProof {
 }
 
 impl<'a> Rollup<'a> {
-    pub fn new(
-        tree: &'a mut MerkleTree,
-        new_leaves: Vec<BigUint>,
-        program: Vec<u8>,
-        abi: Vec<u8>,
-        proving_key: Vec<u8>,
-    ) -> Rollup<'a> {
-        Self {
-            tree,
-            new_leaves,
-            program,
-            abi,
-            proving_key,
-        }
-    }
-
     pub fn prove(&mut self) -> Result<RollupProof, ProtocolError> {
         let new_leaves = self.new_leaves.clone();
         let rollup_size = new_leaves.len();
@@ -77,11 +62,11 @@ impl<'a> Rollup<'a> {
             &input,
         )?;
 
-        Ok(RollupProof {
-            zk_proof,
-            new_root,
-            leaves_hash,
-        })
+        Ok(RollupProof::builder()
+            .zk_proof(zk_proof)
+            .new_root(new_root)
+            .leaves_hash(leaves_hash)
+            .build())
     }
 }
 
@@ -137,13 +122,13 @@ mod tests {
             b"5999809398626971894156481321441750001229812699285374901473004231265197659290",
             10,
         )
-        .unwrap();
+        .expect("failed to parse r3");
         let leaves = [r1, r2, r3];
         let expect_hash = BigUint::parse_bytes(
             b"6310518973517441342440727149209914865806190787755638376161673961442084637476",
             10,
         )
-        .unwrap();
+        .expect("failed to parse expect_hash");
         let leaves_hash = calc_leaves_hash(&leaves);
         assert_eq!(expect_hash, leaves_hash);
     }

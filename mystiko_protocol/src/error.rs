@@ -7,9 +7,13 @@ pub enum ProtocolError {
     #[error("parameter error")]
     ParameterError,
     #[error("invalid shielded address")]
-    InvalidShieldedAddress,
+    InvalidShieldedAddressError,
     #[error("invalid note size")]
-    InvalidNoteSize,
+    InvalidNoteSizeError,
+    #[error("invalid note format")]
+    InvalidNoteFormatError,
+    #[error(transparent)]
+    ProtocolKeyError(#[from] ProtocolKeyError),
     #[error(transparent)]
     ECCryptoError(#[from] CryptoError),
     #[error(transparent)]
@@ -20,4 +24,20 @@ pub enum ProtocolError {
     MerkleTreeError(#[from] MerkleTreeError),
     #[error(transparent)]
     SerdeJsonError(#[from] SerdeJsonError),
+}
+
+#[derive(Error, Debug)]
+pub enum ProtocolKeyError {
+    #[error("generate note random secret key error")]
+    GenerateNoteRandomSecretKeyError,
+    #[error("generate encrypt public key error")]
+    GenerateEncryptPublicKeyError,
+    #[error("import verify public key error")]
+    ImportVerifyPublicKeyError,
+    #[error("import verify secret key error")]
+    ImportVerifySecretKeyError,
+    #[error("import encrypt public key error")]
+    ImportEncryptPublicKeyError,
+    #[error("import encrypt secret key error")]
+    ImportEncryptSecretKeyError,
 }
