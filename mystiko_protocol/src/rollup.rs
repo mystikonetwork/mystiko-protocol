@@ -6,6 +6,7 @@ use mystiko_crypto::merkle_tree::MerkleTree;
 use mystiko_crypto::utils::{biguint_to_be_32_bytes, mod_floor};
 use mystiko_crypto::zkp::proof::ZKProof;
 use num_bigint::BigUint;
+use num_traits::{One, Zero};
 
 #[derive(Debug)]
 pub struct Rollup<'a> {
@@ -89,12 +90,9 @@ fn is_power_of_two(a_number: usize) -> bool {
 }
 
 fn path_indices_number(path_indices: &[usize]) -> BigUint {
-    let binary_string = path_indices
-        .iter()
-        .rev()
-        .map(|x| format!("{:b}", x))
-        .collect::<String>();
-    BigUint::parse_bytes(binary_string.as_bytes(), 2).unwrap()
+    path_indices.iter().rev().fold(BigUint::zero(), |acc, &x| {
+        acc << 1 | if x != 0 { BigUint::one() } else { BigUint::zero() }
+    })
 }
 
 fn calc_leaves_hash(leaves: &[BigUint]) -> BigUint {

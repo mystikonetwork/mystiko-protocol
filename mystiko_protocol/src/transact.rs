@@ -16,65 +16,39 @@ use typed_builder::TypedBuilder;
 
 #[derive(Debug, Clone, TypedBuilder)]
 pub struct Transaction {
-    pub num_inputs: u32,
-    pub num_outputs: u32,
-    pub in_verify_pks: Vec<VerifyPk>,
-    pub in_verify_sks: Vec<VerifySk>,
-    pub in_enc_pks: Vec<EncPk>,
-    pub in_enc_sks: Vec<EncSk>,
-    pub in_commitments: Vec<BigUint>,
-    pub in_private_notes: Vec<EncryptedNote>,
-    pub path_indices: Vec<Vec<usize>>,
-    pub path_elements: Vec<Vec<BigUint>>,
-    pub sig_pk: SigPk,
+    pub inputs: Vec<TransactionCommitmentInput>,
+    pub outputs: Vec<TransactionCommitmentOutput>,
     pub tree_root: BigUint,
+    pub sig_pk: SigPk,
     pub public_amount: TxAmount,
     pub relayer_fee_amount: TxAmount,
-    pub rollup_fee_amounts: Vec<TxAmount>,
-    pub out_verify_pks: Vec<VerifyPk>,
-    pub out_amounts: Vec<TxAmount>,
-    pub out_commitments: Vec<BigUint>,
-    pub out_random_ps: Vec<RandomSk>,
-    pub out_random_rs: Vec<RandomSk>,
-    pub out_random_ss: Vec<RandomSk>,
+    pub random_auditing_secret_key: Option<AuditingSk>,
+    pub auditor_public_keys: Vec<AuditingPk>,
     pub program: Vec<u8>,
     pub abi: Vec<u8>,
     pub proving_key: Vec<u8>,
-    pub random_auditing_secret_key: Option<AuditingSk>,
-    pub auditor_public_keys: Vec<AuditingPk>,
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+pub struct TransactionProof {
+    pub proof: ZKProof,
+    pub zk_input: TransactionZKInput,
 }
 
 impl Transaction {
-    // todo do more check
-    fn check(&self) -> Result<(), ProtocolError> {
-        assert_eq!(self.num_outputs as usize, self.out_amounts.len());
-        assert_eq!(self.num_inputs as usize, self.in_enc_pks.len());
-        Ok(())
+    pub fn prove(&self) -> Result<TransactionProof, ProtocolError> {
+        let zk_input = TransactionZKInput::from(self)?;
+        let tx_param = zk_input.to_json_param()?;
+        let proof = ZKProof::generate(
+            self.program.as_slice(),
+            self.abi.as_slice(),
+            self.proving_key.as_slice(),
+            &tx_param,
+        )?;
+        Ok(TransactionProof::builder().proof(proof).zk_input(zk_input).build())
     }
 
-    pub fn prove(&self) -> Result<ZKProof, ProtocolError> {
-        // todo add logs
-        self.check()?;
-
-        let mut in_random_p = vec![];
-        let mut in_random_r = vec![];
-        let mut in_random_s = vec![];
-        let mut in_amount = vec![];
-        let mut nullifiers = vec![];
-        let mut sig_hashes = vec![];
-
-        for i in 0..self.num_inputs as usize {
-            let note = decrypt_asymmetric(&self.in_enc_sks[i], self.in_private_notes[i].as_slice())?;
-            assert_eq!(note.len(), DECRYPTED_NOTE_SIZE);
-            let note = Note::from_vec(note)?;
-            in_random_p.push(note.random_p);
-            in_random_r.push(note.random_r);
-            in_random_s.push(note.random_s);
-            in_amount.push(note.amount);
-            nullifiers.push(compute_nullifier(&self.in_verify_sks[i], &note.random_p));
-            sig_hashes.push(compute_sig_pk_hash(&self.sig_pk, &self.in_verify_sks[i]));
-        }
-
+    fn build_auditing_data(&self) -> AuditingKeys {
         let random_auditing_sk = if let Some(key) = self.random_auditing_secret_key {
             key
         } else {
@@ -82,109 +56,247 @@ impl Transaction {
         };
 
         let random_auditing_pk = ecies::public_key(&random_auditing_sk);
-        let unpacked_random_auditing_pk = ecies::unpack_public_key(&random_auditing_pk);
-        let mut auditor_public_key_x_signs = vec![];
-        let mut auditor_public_key_xs = vec![];
-        let mut auditor_public_key_ys = vec![];
-        for i in 0..self.auditor_public_keys.len() {
-            let pk = &self.auditor_public_keys[i];
-            let (unpacked_key_x, unpacked_key_y) = ecies::unpack_public_key(pk);
-            auditor_public_key_x_signs.push(is_neg(&unpacked_key_x));
-            auditor_public_key_xs.push(unpacked_key_x);
-            auditor_public_key_ys.push(unpacked_key_y);
-        }
-
-        let mut coefficients = vec![];
-        let mut commitment_shares = vec![];
-        let mut encrypted_commitment_shares = vec![];
-        for i in 0..self.in_commitments.len() {
-            let s_shares = shamir::split(
-                self.in_commitments[i].clone(),
-                NUM_OF_AUDITORS,
-                AUDITING_THRESHOLD,
-                None,
-            )?;
-
-            let cos = s_shares.coefficients.clone();
-            let cos = bigint_slice_to_strings(&cos).to_owned();
-            coefficients.push(cos.clone());
-
-            let p_ys: Vec<String> = s_shares.shares.iter().map(|p| p.y.to_string()).collect();
-            let p_ys: [String; NUM_OF_AUDITORS as usize] = p_ys.try_into().unwrap();
-            commitment_shares.push(p_ys);
-
-            let mut encrypted_shares = vec![];
-            for j in 0..s_shares.shares.len() {
-                let pk = self.auditor_public_keys[j];
-                let encrypted_share = ecies::encrypt(&s_shares.shares[j].y, &pk, &random_auditing_sk);
-                encrypted_shares.push(encrypted_share.to_string());
-            }
-            let encrypted_shares: [String; NUM_OF_AUDITORS as usize] = encrypted_shares.try_into().unwrap();
-            encrypted_commitment_shares.push(encrypted_shares);
-        }
-
-        let in_path_indices: Vec<_> = self
-            .path_indices
-            .clone()
-            .iter_mut()
-            .map(|p| p.iter_mut().map(|&mut x| x != 0).collect::<Vec<_>>())
-            .collect();
-
-        let mut array: Vec<serde_json::Value> = vec![serde_json::json!(self.tree_root.to_string())];
-        array.push(serde_json::json!(bigint_slice_to_strings(&nullifiers)));
-        array.push(serde_json::json!(bigint_slice_to_strings(&sig_hashes)));
-        array.push(serde_json::json!(hex::encode(self.sig_pk)));
-        array.push(serde_json::json!(self.public_amount.to_string()));
-        array.push(serde_json::json!(self.relayer_fee_amount.to_string()));
-        array.push(serde_json::json!(bigint_slice_to_strings(&self.out_commitments)));
-        array.push(serde_json::json!(bigint_slice_to_strings(&self.rollup_fee_amounts)));
-        array.push(serde_json::json!(is_neg(&unpacked_random_auditing_pk.0)));
-        array.push(serde_json::json!(BigUint::from_bytes_le(
-            &unpacked_random_auditing_pk.1
-        )
-        .to_string()));
-        array.push(serde_json::json!(auditor_public_key_x_signs));
-        array.push(serde_json::json!(bytes_to_strings(&auditor_public_key_ys)));
-        array.push(serde_json::json!(encrypted_commitment_shares));
-        array.push(serde_json::json!(bigint_slice_to_strings(&self.in_commitments)));
-        array.push(serde_json::json!(bigint_slice_to_strings(&in_amount)));
-        array.push(serde_json::json!(bytes_to_strings(&in_random_p)));
-        array.push(serde_json::json!(bytes_to_strings(&in_random_r)));
-        array.push(serde_json::json!(bytes_to_strings(&in_random_s)));
-        array.push(serde_json::json!(bytes_to_strings(&self.in_verify_sks)));
-        array.push(serde_json::json!(bytes_to_strings(&self.in_verify_pks)));
-        array.push(serde_json::json!(self
-            .path_elements
+        let (unpacked_random_k_x, unpacked_random_k_y) = ecies::unpack_public_key(&random_auditing_pk);
+        let keys = self
+            .auditor_public_keys
             .iter()
-            .map(|n| bigint_slice_to_strings(n))
-            .collect::<Vec<_>>()));
-        array.push(serde_json::json!(in_path_indices));
-        array.push(serde_json::json!(bigint_slice_to_strings(&self.out_amounts)));
-        array.push(serde_json::json!(bytes_to_strings(&self.out_random_ps)));
-        array.push(serde_json::json!(bytes_to_strings(&self.out_random_rs)));
-        array.push(serde_json::json!(bytes_to_strings(&self.out_random_ss)));
-        array.push(serde_json::json!(bytes_to_strings(&self.out_verify_pks)));
-        array.push(serde_json::json!(BigUint::from_bytes_le(
-            &unpacked_random_auditing_pk.0
-        )
-        .to_string()));
-        array.push(serde_json::json!(bytes_to_strings(&auditor_public_key_xs)));
-        array.push(serde_json::json!(
-            BigUint::from_bytes_le(&random_auditing_sk).to_string()
-        ));
-        array.push(serde_json::json!(coefficients));
-        array.push(serde_json::json!(commitment_shares));
-        let tx_param = serde_json::Value::Array(array).to_string();
-
-        let proof = ZKProof::generate(
-            self.program.as_slice(),
-            self.abi.as_slice(),
-            self.proving_key.as_slice(),
-            &tx_param,
-        )?;
-
-        Ok(proof)
+            .map(|pk| {
+                let (unpacked_key_x, unpacked_key_y) = ecies::unpack_public_key(pk);
+                AuditingPublicKey::builder()
+                    .x_signs(is_neg(&unpacked_key_x))
+                    .x(unpacked_key_x)
+                    .y(unpacked_key_y)
+                    .build()
+            })
+            .collect::<Vec<_>>();
+        AuditingKeys::builder()
+            .random_sk(random_auditing_sk)
+            .random_pk(
+                AuditingPublicKey::builder()
+                    .x_signs(is_neg(&unpacked_random_k_x))
+                    .x(unpacked_random_k_x)
+                    .y(unpacked_random_k_y)
+                    .build(),
+            )
+            .auditor(keys)
+            .build()
     }
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+pub struct TransactionZKInput {
+    pub tree_root: BigUint,
+    pub in_nullifiers: Vec<BigUint>,
+    pub in_sig_hashes: Vec<BigUint>,
+    pub sig_public_key: SigPk,
+    pub public_amount: BigUint,
+    pub relayer_fee_amount: BigUint,
+    pub out_commitments: Vec<BigUint>,
+    pub out_rollup_fee_amounts: Vec<BigUint>,
+    pub random_public_key_x_signs: bool,
+    pub random_public_key_y: BigUint,
+    pub auditor_public_key_x_signs: Vec<bool>,
+    pub auditor_public_key_ys: Vec<BigUint>,
+    pub encrypted_commitment_shares: Vec<Vec<BigUint>>,
+    pub in_commitments: Vec<BigUint>,
+    pub in_amounts: Vec<BigUint>,
+    pub in_random_p: Vec<BigUint>,
+    pub in_random_r: Vec<BigUint>,
+    pub in_random_s: Vec<BigUint>,
+    pub in_secret_key: Vec<BigUint>,
+    pub in_public_key: Vec<BigUint>,
+    pub in_path_elements: Vec<Vec<BigUint>>,
+    pub in_path_indices: Vec<Vec<bool>>,
+    pub out_amounts: Vec<BigUint>,
+    pub out_random_p: Vec<BigUint>,
+    pub out_random_r: Vec<BigUint>,
+    pub out_random_s: Vec<BigUint>,
+    pub out_public_key: Vec<BigUint>,
+    pub random_public_key_x: BigUint,
+    pub auditor_public_key_xs: Vec<BigUint>,
+    pub random_secret_key: BigUint,
+    pub coefficients: Vec<Vec<BigUint>>,
+    pub in_commitment_shares: Vec<Vec<BigUint>>,
+}
+
+impl TransactionZKInput {
+    fn from(t: &Transaction) -> Result<Self, ProtocolError> {
+        let input_details = t
+            .inputs
+            .iter()
+            .map(|input| input.decrypt(&t.sig_pk))
+            .collect::<Result<Vec<_>, _>>()?;
+        let auditing_keys = t.build_auditing_data();
+        let shares = t
+            .inputs
+            .iter()
+            .map(|input| input.split_commitments(&t.auditor_public_keys, &auditing_keys))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(TransactionZKInput {
+            tree_root: t.tree_root.clone(),
+            in_nullifiers: clone_biguint_vec(&input_details, |d| d.nullifier.clone()),
+            in_sig_hashes: clone_biguint_vec(&input_details, |d| d.sig_hash.clone()),
+            sig_public_key: t.sig_pk,
+            public_amount: t.public_amount.clone(),
+            relayer_fee_amount: t.relayer_fee_amount.clone(),
+            out_commitments: clone_biguint_vec(&t.outputs, |o| o.commitment.clone()),
+            out_rollup_fee_amounts: clone_biguint_vec(&t.outputs, |o| o.rollup_fee_amount.clone()),
+            random_public_key_x_signs: auditing_keys.random_pk.x_signs,
+            random_public_key_y: BigUint::from_bytes_le(&auditing_keys.random_pk.y),
+            auditor_public_key_x_signs: auditing_keys.auditor.iter().map(|k| k.x_signs).collect(),
+            auditor_public_key_ys: clone_biguint_vec(&auditing_keys.auditor, |k| BigUint::from_bytes_le(&k.y)),
+            encrypted_commitment_shares: shares.iter().map(|s| &s.encrypted_shares).cloned().collect(),
+            in_commitments: clone_biguint_vec(&t.inputs, |i| i.commitment.clone()),
+            in_amounts: clone_biguint_vec(&input_details, |i| i.amount.clone()),
+            in_random_p: clone_biguint_vec(&input_details, |i| BigUint::from_bytes_le(&i.random_p)),
+            in_random_r: clone_biguint_vec(&input_details, |i| BigUint::from_bytes_le(&i.random_r)),
+            in_random_s: clone_biguint_vec(&input_details, |i| BigUint::from_bytes_le(&i.random_s)),
+            in_secret_key: clone_biguint_vec(&t.inputs, |i| BigUint::from_bytes_le(&i.sk_verify)),
+            in_public_key: clone_biguint_vec(&t.inputs, |i| BigUint::from_bytes_le(&i.pk_verify)),
+            in_path_elements: t.inputs.iter().map(|i| i.path_elements.clone()).collect(),
+            in_path_indices: input_details.iter().map(|i| i.path_indices.clone()).collect(),
+            out_amounts: clone_biguint_vec(&t.outputs, |o| o.amount.clone()),
+            out_random_p: clone_biguint_vec(&t.outputs, |o| BigUint::from_bytes_le(&o.random_p)),
+            out_random_r: clone_biguint_vec(&t.outputs, |o| BigUint::from_bytes_le(&o.random_r)),
+            out_random_s: clone_biguint_vec(&t.outputs, |o| BigUint::from_bytes_le(&o.random_s)),
+            out_public_key: clone_biguint_vec(&t.outputs, |o| BigUint::from_bytes_le(&o.pk_verify)),
+            random_public_key_x: BigUint::from_bytes_le(&auditing_keys.random_pk.x),
+            auditor_public_key_xs: clone_biguint_vec(&auditing_keys.auditor, |k| BigUint::from_bytes_le(&k.x)),
+            random_secret_key: BigUint::from_bytes_le(&auditing_keys.random_sk),
+            coefficients: shares.iter().map(|s| s.coefficient.clone()).collect(),
+            in_commitment_shares: shares.iter().map(|s| s.shares.clone()).collect(),
+        })
+    }
+
+    fn to_json_param(&self) -> Result<String, ProtocolError> {
+        let mut array: Vec<serde_json::Value> = vec![json_biguint(&self.tree_root)];
+        array.push(json_biguint_vec(&self.in_nullifiers));
+        array.push(json_biguint_vec(&self.in_sig_hashes));
+        array.push(serde_json::json!(hex::encode(self.sig_public_key)));
+        array.push(json_biguint(&self.public_amount));
+        array.push(json_biguint(&self.relayer_fee_amount));
+        array.push(json_biguint_vec(&self.out_commitments));
+        array.push(json_biguint_vec(&self.out_rollup_fee_amounts));
+        array.push(serde_json::json!(self.random_public_key_x_signs));
+        array.push(json_biguint(&self.random_public_key_y));
+        array.push(serde_json::json!(self.auditor_public_key_x_signs));
+        array.push(json_biguint_vec(&self.auditor_public_key_ys));
+        array.push(json_biguint_vec_vec(&self.encrypted_commitment_shares));
+        array.push(json_biguint_vec(&self.in_commitments));
+        array.push(json_biguint_vec(&self.in_amounts));
+        array.push(json_biguint_vec(&self.in_random_p));
+        array.push(json_biguint_vec(&self.in_random_r));
+        array.push(json_biguint_vec(&self.in_random_s));
+        array.push(json_biguint_vec(&self.in_secret_key));
+        array.push(json_biguint_vec(&self.in_public_key));
+        array.push(json_biguint_vec_vec(&self.in_path_elements));
+        array.push(serde_json::json!(self.in_path_indices));
+        array.push(json_biguint_vec(&self.out_amounts));
+        array.push(json_biguint_vec(&self.out_random_p));
+        array.push(json_biguint_vec(&self.out_random_r));
+        array.push(json_biguint_vec(&self.out_random_s));
+        array.push(json_biguint_vec(&self.out_public_key));
+        array.push(json_biguint(&self.random_public_key_x));
+        array.push(json_biguint_vec(&self.auditor_public_key_xs));
+        array.push(json_biguint(&self.random_secret_key));
+        array.push(json_biguint_vec_vec(&self.coefficients));
+        array.push(json_biguint_vec_vec(&self.in_commitment_shares));
+
+        Ok(serde_json::Value::Array(array).to_string())
+    }
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+pub struct TransactionCommitmentInput {
+    pub commitment: BigUint,
+    pub private_note: EncryptedNote,
+    pub path_indices: Vec<usize>,
+    pub path_elements: Vec<BigUint>,
+    pub pk_verify: VerifyPk,
+    pub sk_verify: VerifySk,
+    pub pk_enc: EncPk,
+    pub sk_enc: EncSk,
+}
+
+impl TransactionCommitmentInput {
+    fn decrypt(&self, sig_pk: &SigPk) -> Result<TransactionInputDetails, ProtocolError> {
+        let note = decrypt_asymmetric(&self.sk_enc, self.private_note.as_slice())?;
+        assert_eq!(note.len(), DECRYPTED_NOTE_SIZE);
+        let note = Note::from_vec(note)?;
+        let path = self.path_indices.iter().map(|&x| x != 0).collect::<Vec<_>>();
+        Ok(TransactionInputDetails::builder()
+            .random_p(note.random_p)
+            .random_r(note.random_r)
+            .random_s(note.random_s)
+            .amount(note.amount)
+            .nullifier(compute_nullifier(&self.sk_verify, &note.random_p))
+            .sig_hash(compute_sig_pk_hash(sig_pk, &self.sk_verify))
+            .path_indices(path)
+            .build())
+    }
+
+    fn split_commitments(
+        &self,
+        auditor_public_keys: &[AuditingPk],
+        auditing_keys: &AuditingKeys,
+    ) -> Result<TransactionCommitmentShares, ProtocolError> {
+        let s_shares = shamir::split(self.commitment.clone(), NUM_OF_AUDITORS, AUDITING_THRESHOLD, None)?;
+        let coefficient = s_shares.coefficients.clone();
+        let p_ys = s_shares.shares.iter().map(|p| p.y.clone()).collect::<Vec<_>>();
+        let mut encrypted_shares = vec![];
+        for (share, pk) in s_shares.shares.iter().zip(auditor_public_keys.iter()) {
+            let encrypted_share = ecies::encrypt(&share.y, pk, &auditing_keys.random_sk);
+            encrypted_shares.push(encrypted_share);
+        }
+        Ok(TransactionCommitmentShares::builder()
+            .coefficient(coefficient)
+            .shares(p_ys)
+            .encrypted_shares(encrypted_shares)
+            .build())
+    }
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+pub struct TransactionCommitmentOutput {
+    pub commitment: BigUint,
+    pub pk_verify: VerifyPk,
+    pub random_p: RandomSk,
+    pub random_r: RandomSk,
+    pub random_s: RandomSk,
+    pub amount: TxAmount,
+    pub rollup_fee_amount: TxAmount,
+}
+#[derive(Debug, Clone, TypedBuilder)]
+struct TransactionInputDetails {
+    pub random_p: RandomSk,
+    pub random_r: RandomSk,
+    pub random_s: RandomSk,
+    pub amount: TxAmount,
+    pub nullifier: BigUint,
+    pub sig_hash: BigUint,
+    pub path_indices: Vec<bool>,
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+struct TransactionCommitmentShares {
+    pub coefficient: Vec<BigUint>,
+    pub shares: Vec<BigUint>,
+    pub encrypted_shares: Vec<BigUint>,
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+struct AuditingKeys {
+    pub random_sk: AuditingSk,
+    pub random_pk: AuditingPublicKey,
+    pub auditor: Vec<AuditingPublicKey>,
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+struct AuditingPublicKey {
+    pub x_signs: bool,
+    pub x: AuditingPk,
+    pub y: AuditingPk,
 }
 
 fn is_neg(key: &[u8]) -> bool {
@@ -193,12 +305,24 @@ fn is_neg(key: &[u8]) -> bool {
     key_big_int.gt(&field_size_half)
 }
 
-fn bigint_slice_to_strings(v: &[BigUint]) -> Vec<String> {
-    v.iter().map(|n| n.to_string()).collect()
+fn clone_biguint_vec<T, F>(data: &[T], extractor: F) -> Vec<BigUint>
+where
+    F: Fn(&T) -> BigUint,
+{
+    data.iter().map(extractor).collect()
 }
 
-fn bytes_to_strings<T: AsRef<[u8]>>(v: &[T]) -> Vec<String> {
-    v.iter()
-        .map(|n| BigUint::from_bytes_le(n.as_ref()).to_string())
-        .collect()
+fn json_biguint(value: &BigUint) -> serde_json::Value {
+    serde_json::json!(value.to_string())
+}
+
+fn json_biguint_vec(values: &[BigUint]) -> serde_json::Value {
+    serde_json::json!(values.iter().map(|v| v.to_string()).collect::<Vec<_>>())
+}
+
+fn json_biguint_vec_vec(values: &[Vec<BigUint>]) -> serde_json::Value {
+    serde_json::json!(values
+        .iter()
+        .map(|v| v.iter().map(|v| v.to_string()).collect::<Vec<_>>())
+        .collect::<Vec<_>>())
 }

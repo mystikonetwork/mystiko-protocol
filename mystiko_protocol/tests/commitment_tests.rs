@@ -1,12 +1,4 @@
-extern crate ff;
-extern crate mystiko_crypto;
-extern crate mystiko_protocol;
-extern crate num_bigint;
-
 use ff::hex;
-use num_bigint::BigUint;
-
-use crate::mystiko_protocol::utils::{compute_nullifier, compute_sig_pk_hash};
 use mystiko_crypto::crypto::decrypt_asymmetric;
 use mystiko_crypto::utils::random_bytes;
 use mystiko_protocol::address::ShieldedAddress;
@@ -15,6 +7,8 @@ use mystiko_protocol::error::ProtocolError;
 use mystiko_protocol::key::{
     encryption_public_key, encryption_secret_key, verification_public_key, verification_secret_key,
 };
+use mystiko_protocol::utils::{compute_nullifier, compute_sig_pk_hash};
+use num_bigint::BigUint;
 
 #[tokio::test]
 async fn test_nullifier_compatible_with_js() {
