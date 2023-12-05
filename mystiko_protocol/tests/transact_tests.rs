@@ -4,6 +4,8 @@ use ethers_signers::{LocalWallet, Signer};
 use mystiko_crypto::ecies;
 use mystiko_crypto::merkle_tree::MerkleTree;
 use mystiko_crypto::utils::random_bytes;
+use mystiko_crypto::zkp::proof::{G16Proof, G16Prover};
+use mystiko_crypto::zkp::ZKProver;
 use mystiko_fs::{read_file_bytes, read_gzip_file_bytes};
 use mystiko_protocol::address::ShieldedAddress;
 use mystiko_protocol::commitment::{Commitment, Note};
@@ -16,6 +18,7 @@ use mystiko_protocol::types::{ENC_SK_SIZE, MERKLE_TREE_LEVELS, VERIFY_SK_SIZE};
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
 use std::ops::Sub;
+use std::sync::Arc;
 
 fn generate_eth_address() -> SigPk {
     let wallet = LocalWallet::new(&mut thread_rng());
@@ -165,17 +168,16 @@ async fn test_transaction1x0() {
             .unwrap(),
         None,
     );
-
-    let proof = tx.prove().unwrap();
-    let verify = proof
-        .proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x0.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let proof = tx.prove::<G16Prover, G16Proof>(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x0.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&proof.proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(&options).unwrap();
     assert!(verify);
 }
 
@@ -195,17 +197,16 @@ async fn test_transaction1x1() {
             .unwrap(),
         Some(true),
     );
-
-    let proof = tx.prove().unwrap();
-    let verify = proof
-        .proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x1.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let proof = tx.prove::<G16Prover, G16Proof>(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x1.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&proof.proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(&options).unwrap();
     assert!(verify);
 }
 
@@ -226,16 +227,16 @@ async fn test_transaction1x2() {
         Some(true),
     );
 
-    let proof = tx.prove().unwrap();
-    let verify = proof
-        .proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x2.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let proof = tx.prove::<G16Prover, G16Proof>(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction1x2.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&proof.proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(&options).unwrap();
     assert!(verify);
 }
 
@@ -256,16 +257,16 @@ async fn test_transaction2x0() {
         Some(true),
     );
 
-    let proof = tx.prove().unwrap();
-    let verify = proof
-        .proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x0.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let proof = tx.prove::<G16Prover, G16Proof>(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x0.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&proof.proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(&options).unwrap();
     assert!(verify);
 }
 
@@ -286,16 +287,16 @@ async fn test_transaction2x1() {
         Some(true),
     );
 
-    let proof = tx.prove().unwrap();
-    let verify = proof
-        .proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x1.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let proof = tx.prove::<G16Prover, G16Proof>(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x1.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&proof.proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(&options).unwrap();
     assert!(verify);
 }
 
@@ -316,16 +317,16 @@ async fn test_transaction2x2() {
         Some(true),
     );
 
-    let proof = tx.prove().unwrap();
-    let verify = proof
-        .proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x2.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let proof = tx.prove::<G16Prover, G16Proof>(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Transaction2x2.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&proof.proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(&options).unwrap();
     assert!(verify);
     let _ = tx.clone();
 }

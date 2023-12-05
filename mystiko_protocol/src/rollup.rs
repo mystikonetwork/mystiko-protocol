@@ -4,9 +4,10 @@ use mystiko_crypto::constants::FIELD_SIZE;
 use mystiko_crypto::hash::keccak256;
 use mystiko_crypto::merkle_tree::MerkleTree;
 use mystiko_crypto::utils::{biguint_to_be_32_bytes, mod_floor};
-use mystiko_crypto::zkp::proof::ZKProof;
+use mystiko_crypto::zkp::ZKProver;
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
+use std::sync::Arc;
 use typed_builder::TypedBuilder;
 
 #[derive(Debug, TypedBuilder)]
@@ -19,14 +20,17 @@ pub struct Rollup<'a> {
 }
 
 #[derive(Debug, Clone, TypedBuilder)]
-pub struct RollupProof {
-    pub zk_proof: ZKProof,
+pub struct RollupProof<Proof> {
+    pub zk_proof: Proof,
     pub new_root: BigUint,
     pub leaves_hash: BigUint,
 }
 
 impl<'a> Rollup<'a> {
-    pub fn prove(&mut self) -> Result<RollupProof, ProtocolError> {
+    pub fn prove<Prover, Proof>(&mut self, prover: Arc<Prover>) -> Result<RollupProof<Proof>, ProtocolError>
+    where
+        Prover: ZKProver<Proof>,
+    {
         let new_leaves = self.new_leaves.clone();
         let rollup_size = new_leaves.len();
         assert!(is_power_of_two(rollup_size));
@@ -55,13 +59,13 @@ impl<'a> Rollup<'a> {
         ];
 
         let input = serde_json::Value::Array(array).to_string();
-        let zk_proof = ZKProof::generate(
-            self.program.as_slice(),
-            self.abi.as_slice(),
-            self.proving_key.as_slice(),
-            &input,
-        )?;
-
+        let options = mystiko_crypto::zkp::ZKProveOptions::builder()
+            .program(self.program.as_slice())
+            .abi_spec(self.abi.as_slice())
+            .proving_key(self.proving_key.as_slice())
+            .json_args_str(&input)
+            .build();
+        let zk_proof = prover.prove(&options)?;
         Ok(RollupProof::builder()
             .zk_proof(zk_proof)
             .new_root(new_root)

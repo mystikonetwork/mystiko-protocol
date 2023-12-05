@@ -9,9 +9,10 @@ use mystiko_crypto::constants::FIELD_SIZE;
 use mystiko_crypto::crypto::decrypt_asymmetric;
 use mystiko_crypto::ecies;
 use mystiko_crypto::shamir;
-use mystiko_crypto::zkp::proof::ZKProof;
+use mystiko_crypto::zkp::{ZKProveOptions, ZKProver};
 use num_bigint::BigUint;
 use std::ops::Shr;
+use std::sync::Arc;
 use typed_builder::TypedBuilder;
 
 #[derive(Debug, Clone, TypedBuilder)]
@@ -30,21 +31,25 @@ pub struct Transaction {
 }
 
 #[derive(Debug, Clone, TypedBuilder)]
-pub struct TransactionProof {
-    pub proof: ZKProof,
+pub struct TransactionProof<Proof> {
+    pub proof: Proof,
     pub zk_input: TransactionZKInput,
 }
 
 impl Transaction {
-    pub fn prove(&self) -> Result<TransactionProof, ProtocolError> {
+    pub fn prove<Prover, Proof>(&self, prover: Arc<Prover>) -> Result<TransactionProof<Proof>, ProtocolError>
+    where
+        Prover: ZKProver<Proof>,
+    {
         let zk_input = TransactionZKInput::from(self)?;
         let tx_param = zk_input.to_json_param()?;
-        let proof = ZKProof::generate(
-            self.program.as_slice(),
-            self.abi.as_slice(),
-            self.proving_key.as_slice(),
-            &tx_param,
-        )?;
+        let options = ZKProveOptions::builder()
+            .program(self.program.as_slice())
+            .abi_spec(self.abi.as_slice())
+            .proving_key(self.proving_key.as_slice())
+            .json_args_str(tx_param.as_str())
+            .build();
+        let proof = prover.prove(&options)?;
         Ok(TransactionProof::builder().proof(proof).zk_input(zk_input).build())
     }
 

@@ -1,4 +1,5 @@
-mod compute_witness;
-mod generate_proof;
+mod g16_prover;
+mod prover;
 
-pub mod proof;
+pub use g16_prover::*;
+pub use prover::*;
