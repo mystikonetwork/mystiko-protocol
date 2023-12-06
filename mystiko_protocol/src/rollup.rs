@@ -30,7 +30,7 @@ impl<'a> Rollup<'a> {
     pub fn prove<Prover, Proof>(&mut self, prover: Arc<Prover>) -> Result<RollupProof<Proof>, ProtocolError>
     where
         Prover: ZKProver<Proof>,
-        ProtocolError: From<<Prover as ZKProver<Proof>>::Error>,
+        ProtocolError: From<Prover::Error>,
     {
         let new_leaves = self.new_leaves.clone();
         let rollup_size = new_leaves.len();
