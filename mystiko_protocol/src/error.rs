@@ -1,4 +1,5 @@
-use mystiko_crypto::error::{CryptoError, MerkleTreeError, SecretShareError, ZkpError};
+use mystiko_crypto::error::{CryptoError, MerkleTreeError, SecretShareError};
+use mystiko_crypto::zkp::G16ProverError;
 use serde_json::Error as SerdeJsonError;
 use thiserror::Error;
 
@@ -19,11 +20,13 @@ pub enum ProtocolError {
     #[error(transparent)]
     SecretShareError(#[from] SecretShareError),
     #[error(transparent)]
-    ZkpError(#[from] ZkpError),
-    #[error(transparent)]
     MerkleTreeError(#[from] MerkleTreeError),
     #[error(transparent)]
     SerdeJsonError(#[from] SerdeJsonError),
+    #[error(transparent)]
+    G16ProverError(#[from] G16ProverError),
+    #[error(transparent)]
+    AnyhowError(#[from] anyhow::Error),
 }
 
 #[derive(Error, Debug)]

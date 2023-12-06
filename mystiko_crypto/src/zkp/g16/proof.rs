@@ -1,4 +1,4 @@
-use crate::error::ZkpError;
+use crate::zkp::G16ProverError;
 use anyhow::Result;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -15,26 +15,26 @@ pub struct G16Proof {
 }
 
 impl G16Proof {
-    pub fn verify(&self, vk: serde_json::Value) -> Result<bool, ZkpError> {
+    pub fn verify(&self, vk: serde_json::Value) -> Result<bool, G16ProverError> {
         let vk_curve = vk
             .get("curve")
-            .ok_or_else(|| ZkpError::VKError("Field `curve` not found in verification key".to_string()))?
+            .ok_or_else(|| G16ProverError::VKError("Field `curve` not found in verification key".to_string()))?
             .as_str()
-            .ok_or_else(|| ZkpError::VKError("`curve` should be a string".to_string()))?;
+            .ok_or_else(|| G16ProverError::VKError("`curve` should be a string".to_string()))?;
         let vk_scheme = vk
             .get("scheme")
-            .ok_or_else(|| ZkpError::VKError("Field `scheme` not found in verification key".to_string()))?
+            .ok_or_else(|| G16ProverError::VKError("Field `scheme` not found in verification key".to_string()))?
             .as_str()
-            .ok_or_else(|| ZkpError::VKError("`scheme` should be a string".to_string()))?;
+            .ok_or_else(|| G16ProverError::VKError("`scheme` should be a string".to_string()))?;
 
         if vk_curve != "bn128" {
-            return Err(ZkpError::MismatchError(
+            return Err(G16ProverError::MismatchError(
                 "curve of the proof and the verification mismatch".to_string(),
             ));
         }
 
         if vk_scheme != "g16" {
-            return Err(ZkpError::MismatchError(
+            return Err(G16ProverError::MismatchError(
                 "scheme of the proof and the verification mismatch".to_string(),
             ));
         }
@@ -42,15 +42,15 @@ impl G16Proof {
         call_verify::<Bn128Field, G16, Bellman>(vk, (*self).clone().into())
     }
 
-    pub fn to_json_string(&self) -> Result<String, ZkpError> {
-        serde_json::to_string_pretty(self).map_err(|why| ZkpError::ProofError(why.to_string()))
+    pub fn to_json_string(&self) -> Result<String, G16ProverError> {
+        serde_json::to_string_pretty(self).map_err(|why| G16ProverError::ProofError(why.to_string()))
     }
 
-    pub fn from_json_string(proof: &str) -> Result<Self, ZkpError> {
+    pub fn from_json_string(proof: &str) -> Result<Self, G16ProverError> {
         let proof_json: serde_json::Value = serde_json::from_str(proof)?;
 
         let proof: G16Proof =
-            serde_json::from_value(proof_json).map_err(|why| ZkpError::ProofError(why.to_string()))?;
+            serde_json::from_value(proof_json).map_err(|why| G16ProverError::ProofError(why.to_string()))?;
         Ok(proof)
     }
 
@@ -63,7 +63,7 @@ impl G16Proof {
 type ZokratesG16Proof = zokrates_proof_systems::Proof<Bn128Field, G16>;
 
 impl TryFrom<ZokratesG16Proof> for G16Proof {
-    type Error = ZkpError;
+    type Error = G16ProverError;
 
     fn try_from(zk_proof: ZokratesG16Proof) -> Result<Self, Self::Error> {
         let proof = Proof {
@@ -117,13 +117,13 @@ impl G2Point {
         ))
     }
 
-    fn from_affine(point: G2Affine) -> Result<Self, ZkpError> {
+    fn from_affine(point: G2Affine) -> Result<Self, G16ProverError> {
         match point {
             G2Affine::Fq2(a) => Ok(G2Point {
                 x: [a.0 .0, a.0 .1],
                 y: [a.1 .0, a.1 .1],
             }),
-            _ => Err(ZkpError::ProofError("Unexpected G2Affine type".to_string())),
+            _ => Err(G16ProverError::ProofError("Unexpected G2Affine type".to_string())),
         }
     }
 }
@@ -138,8 +138,8 @@ struct Proof {
 fn call_verify<T: Field, S: Scheme<T>, B: Backend<T, S>>(
     vk: serde_json::Value,
     proof: zokrates_proof_systems::Proof<T, S>,
-) -> Result<bool, ZkpError> {
-    let vk = serde_json::from_value(vk).map_err(|why| ZkpError::VKError(why.to_string()))?;
+) -> Result<bool, G16ProverError> {
+    let vk = serde_json::from_value(vk).map_err(|why| G16ProverError::VKError(why.to_string()))?;
     Ok(B::verify(vk, proof))
 }
 
@@ -158,7 +158,7 @@ mod tests {
         let _ = G2Point::from_affine(point);
         let point = G2Affine::Fq(G2AffineFq("0".to_string(), "1".to_string()));
         let result = G2Point::from_affine(point);
-        assert!(matches!(result.err().unwrap(), ZkpError::ProofError(_)));
+        assert!(matches!(result.err().unwrap(), G16ProverError::ProofError(_)));
     }
 
     #[tokio::test]

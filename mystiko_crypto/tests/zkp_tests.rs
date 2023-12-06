@@ -1,6 +1,5 @@
-use mystiko_crypto::error::ZkpError;
-use mystiko_crypto::zkp::ZKProver;
 use mystiko_crypto::zkp::{G16Proof, G16Prover};
+use mystiko_crypto::zkp::{G16ProverError, ZKProver};
 use mystiko_fs::read_file_bytes;
 //
 // type ZokTaggedProof = TaggedProof<Bn128Field, G16>;
@@ -39,12 +38,12 @@ async fn test_prove_and_verify() {
 #[tokio::test]
 async fn test_from_json_string_error() {
     let proof = G16Proof::from_json_string("test");
-    assert!(matches!(proof.err().unwrap(), ZkpError::SerdeJsonError(_)));
+    assert!(matches!(proof.err().unwrap(), G16ProverError::SerdeJsonError(_)));
 
     let arr = ("1", "0", "1");
     let args = serde_json::to_string(&arr).unwrap();
     let proof = G16Proof::from_json_string(&args);
-    assert!(matches!(proof.err().unwrap(), ZkpError::ProofError(_)));
+    assert!(matches!(proof.err().unwrap(), G16ProverError::ProofError(_)));
 }
 
 #[tokio::test]
@@ -62,7 +61,10 @@ async fn test_prove_error() {
         .build();
     let prover = G16Prover;
     let proof = prover.prove(options);
-    assert!(matches!(proof.err().unwrap(), ZkpError::DeserializeProgramError(_)));
+    assert!(matches!(
+        proof.err().unwrap(),
+        G16ProverError::DeserializeProgramError(_)
+    ));
 
     let arr = ("1", "0");
     let args = serde_json::to_string(&arr).unwrap();
@@ -76,7 +78,7 @@ async fn test_prove_error() {
         .json_args_str(&args)
         .build();
     let proof = prover.prove(options);
-    assert!(matches!(proof.err().unwrap(), ZkpError::AbiParseError(_)));
+    assert!(matches!(proof.err().unwrap(), G16ProverError::AbiParseError(_)));
 }
 
 #[tokio::test]
@@ -93,7 +95,7 @@ async fn test_verify_error() {
         .build();
     let prover = G16Prover;
     let result = prover.verify(options);
-    assert!(matches!(result.err().unwrap(), ZkpError::SerdeJsonError(_)));
+    assert!(matches!(result.err().unwrap(), G16ProverError::SerdeJsonError(_)));
 
     let vk = read_file_bytes("./tests/files/zkp/wrong/verification_missing_curve.key")
         .await
@@ -103,7 +105,7 @@ async fn test_verify_error() {
         .verification_key(vk.as_slice())
         .build();
     let result = prover.verify(options);
-    assert!(matches!(result.err().unwrap(), ZkpError::VKError(_)));
+    assert!(matches!(result.err().unwrap(), G16ProverError::VKError(_)));
 
     let vk = read_file_bytes("./tests/files/zkp/wrong/verification_missing_scheme.key")
         .await
@@ -113,7 +115,7 @@ async fn test_verify_error() {
         .verification_key(vk.as_slice())
         .build();
     let result = prover.verify(options);
-    assert!(matches!(result.err().unwrap(), ZkpError::VKError(_)));
+    assert!(matches!(result.err().unwrap(), G16ProverError::VKError(_)));
 
     let vk = read_file_bytes("./tests/files/zkp/wrong/verification_bls12_381.key")
         .await
@@ -123,7 +125,7 @@ async fn test_verify_error() {
         .verification_key(vk.as_slice())
         .build();
     let result = prover.verify(options);
-    assert!(matches!(result.err().unwrap(), ZkpError::MismatchError(_)));
+    assert!(matches!(result.err().unwrap(), G16ProverError::MismatchError(_)));
 
     let vk = read_file_bytes("./tests/files/zkp/wrong/verification_gm17.key")
         .await
@@ -133,5 +135,5 @@ async fn test_verify_error() {
         .verification_key(vk.as_slice())
         .build();
     let result = prover.verify(options);
-    assert!(matches!(result.err().unwrap(), ZkpError::MismatchError(_)));
+    assert!(matches!(result.err().unwrap(), G16ProverError::MismatchError(_)));
 }

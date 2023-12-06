@@ -40,6 +40,7 @@ impl Transaction {
     pub fn prove<Prover, Proof>(&self, prover: Arc<Prover>) -> Result<TransactionProof<Proof>, ProtocolError>
     where
         Prover: ZKProver<Proof>,
+        ProtocolError: From<<Prover as ZKProver<Proof>>::Error>,
     {
         let zk_input = TransactionZKInput::from(self)?;
         let tx_param = zk_input.to_json_param()?;

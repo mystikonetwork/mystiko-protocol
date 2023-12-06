@@ -1,4 +1,3 @@
-use crate::error::ZkpError;
 use anyhow::Result;
 use typed_builder::TypedBuilder;
 
@@ -17,6 +16,8 @@ pub struct ZKVerifyOptions<'a, Proof> {
 }
 
 pub trait ZKProver<P> {
-    fn prove(&self, options: ZKProveOptions) -> Result<P, ZkpError>;
-    fn verify(&self, options: ZKVerifyOptions<P>) -> Result<bool, ZkpError>;
+    type Error;
+
+    fn prove(&self, options: ZKProveOptions) -> Result<P, Self::Error>;
+    fn verify(&self, options: ZKVerifyOptions<P>) -> Result<bool, Self::Error>;
 }
