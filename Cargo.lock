@@ -1960,6 +1960,7 @@ dependencies = [
  "sha3",
  "thiserror",
  "tokio",
+ "typed-builder",
  "zokrates_abi",
  "zokrates_ast",
  "zokrates_bellman",

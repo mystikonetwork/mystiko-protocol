@@ -8,7 +8,7 @@ async fn test_error() {
     assert!(!matches!(err, ProtocolError::InvalidShieldedAddressError));
     assert!(!matches!(err, ProtocolError::InvalidNoteSizeError));
     assert!(!matches!(err, ProtocolError::SecretShareError(_)));
-    assert!(!matches!(err, ProtocolError::ZkpError(_)));
+    assert!(!matches!(err, ProtocolError::G16ProverError(_)));
     assert!(!matches!(err, ProtocolError::MerkleTreeError(_)));
     assert!(!matches!(err, ProtocolError::SerdeJsonError(_)));
 }

@@ -1,8 +1,9 @@
-use num_bigint::BigUint;
-
 use mystiko_crypto::merkle_tree::MerkleTree;
+use mystiko_crypto::zkp::{G16Prover, ZKProver};
 use mystiko_fs::{read_file_bytes, read_gzip_file_bytes};
 use mystiko_protocol::rollup::Rollup;
+use num_bigint::BigUint;
+use std::sync::Arc;
 
 const FILE_PATH: &str = "./../mystiko_circuits/dist/zokrates/dev";
 
@@ -32,16 +33,16 @@ async fn test_rollup1() {
         .proving_key(pkey)
         .build();
 
-    let r = rollup.prove().unwrap();
-    let verify = r
-        .zk_proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup1.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let r = rollup.prove(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup1.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&r.zk_proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -71,16 +72,16 @@ async fn test_rollup2() {
         .abi(abi)
         .proving_key(pkey)
         .build();
-    let r = rollup.prove().unwrap();
-    let verify = r
-        .zk_proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup2.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let r = rollup.prove(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup2.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&r.zk_proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -113,16 +114,16 @@ async fn test_rollup4() {
         .abi(abi)
         .proving_key(pkey)
         .build();
-    let r = rollup.prove().unwrap();
-    let verify = r
-        .zk_proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup4.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let r = rollup.prove(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup4.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&r.zk_proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -155,16 +156,16 @@ async fn test_rollup8() {
         .abi(abi)
         .proving_key(pkey)
         .build();
-    let r = rollup.prove().unwrap();
-    let verify = r
-        .zk_proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup8.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let r = rollup.prove(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup8.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&r.zk_proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -197,16 +198,16 @@ async fn test_rollup16() {
         .abi(abi)
         .proving_key(pkey)
         .build();
-    let r = rollup.prove().unwrap();
-    let verify = r
-        .zk_proof
-        .verify(
-            read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup16.vkey.gz"))
-                .await
-                .unwrap()
-                .as_slice(),
-        )
+    let prover = Arc::new(G16Prover);
+    let r = rollup.prove(prover.clone()).unwrap();
+    let vk = read_gzip_file_bytes(&format!("{}/{}", FILE_PATH, "/Rollup16.vkey.gz"))
+        .await
         .unwrap();
+    let options = mystiko_crypto::zkp::ZKVerifyOptions::builder()
+        .proof(&r.zk_proof)
+        .verification_key(vk.as_slice())
+        .build();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
