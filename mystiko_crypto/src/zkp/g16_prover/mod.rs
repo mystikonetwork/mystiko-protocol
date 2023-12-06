@@ -1,7 +1,7 @@
 mod compute_witness;
 mod generate_proof;
 mod proof;
-mod prove;
+mod prover;
 
 pub use proof::*;
-pub use prove::*;
+pub use prover::*;
