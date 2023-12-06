@@ -4,8 +4,7 @@ use ethers_signers::{LocalWallet, Signer};
 use mystiko_crypto::ecies;
 use mystiko_crypto::merkle_tree::MerkleTree;
 use mystiko_crypto::utils::random_bytes;
-use mystiko_crypto::zkp::proof::{G16Proof, G16Prover};
-use mystiko_crypto::zkp::ZKProver;
+use mystiko_crypto::zkp::{G16Proof, G16Prover, ZKProver};
 use mystiko_fs::{read_file_bytes, read_gzip_file_bytes};
 use mystiko_protocol::address::ShieldedAddress;
 use mystiko_protocol::commitment::{Commitment, Note};
@@ -177,7 +176,7 @@ async fn test_transaction1x0() {
         .proof(&proof.proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
 }
 
@@ -206,7 +205,7 @@ async fn test_transaction1x1() {
         .proof(&proof.proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
 }
 
@@ -236,7 +235,7 @@ async fn test_transaction1x2() {
         .proof(&proof.proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
 }
 
@@ -266,7 +265,7 @@ async fn test_transaction2x0() {
         .proof(&proof.proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
 }
 
@@ -296,7 +295,7 @@ async fn test_transaction2x1() {
         .proof(&proof.proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
 }
 
@@ -326,7 +325,7 @@ async fn test_transaction2x2() {
         .proof(&proof.proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     let _ = tx.clone();
 }

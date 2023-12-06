@@ -49,7 +49,7 @@ impl Transaction {
             .proving_key(self.proving_key.as_slice())
             .json_args_str(tx_param.as_str())
             .build();
-        let proof = prover.prove(&options)?;
+        let proof = prover.prove(options)?;
         Ok(TransactionProof::builder().proof(proof).zk_input(zk_input).build())
     }
 

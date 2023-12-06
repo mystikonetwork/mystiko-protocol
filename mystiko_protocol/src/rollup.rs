@@ -65,7 +65,7 @@ impl<'a> Rollup<'a> {
             .proving_key(self.proving_key.as_slice())
             .json_args_str(&input)
             .build();
-        let zk_proof = prover.prove(&options)?;
+        let zk_proof = prover.prove(options)?;
         Ok(RollupProof::builder()
             .zk_proof(zk_proof)
             .new_root(new_root)

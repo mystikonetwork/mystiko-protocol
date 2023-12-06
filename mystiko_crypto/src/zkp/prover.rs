@@ -17,6 +17,6 @@ pub struct ZKVerifyOptions<'a, Proof> {
 }
 
 pub trait ZKProver<P> {
-    fn prove(&self, options: &ZKProveOptions) -> Result<P, ZkpError>;
-    fn verify(&self, options: &ZKVerifyOptions<P>) -> Result<bool, ZkpError>;
+    fn prove(&self, options: ZKProveOptions) -> Result<P, ZkpError>;
+    fn verify(&self, options: ZKVerifyOptions<P>) -> Result<bool, ZkpError>;
 }

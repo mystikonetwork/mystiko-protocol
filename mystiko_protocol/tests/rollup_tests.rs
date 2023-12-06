@@ -1,11 +1,9 @@
-use num_bigint::BigUint;
-use std::sync::Arc;
-
 use mystiko_crypto::merkle_tree::MerkleTree;
-use mystiko_crypto::zkp::proof::G16Prover;
-use mystiko_crypto::zkp::ZKProver;
+use mystiko_crypto::zkp::{G16Prover, ZKProver};
 use mystiko_fs::{read_file_bytes, read_gzip_file_bytes};
 use mystiko_protocol::rollup::Rollup;
+use num_bigint::BigUint;
+use std::sync::Arc;
 
 const FILE_PATH: &str = "./../mystiko_circuits/dist/zokrates/dev";
 
@@ -44,7 +42,7 @@ async fn test_rollup1() {
         .proof(&r.zk_proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -83,7 +81,7 @@ async fn test_rollup2() {
         .proof(&r.zk_proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -125,7 +123,7 @@ async fn test_rollup4() {
         .proof(&r.zk_proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -167,7 +165,7 @@ async fn test_rollup8() {
         .proof(&r.zk_proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
@@ -209,7 +207,7 @@ async fn test_rollup16() {
         .proof(&r.zk_proof)
         .verification_key(vk.as_slice())
         .build();
-    let verify = prover.verify(&options).unwrap();
+    let verify = prover.verify(options).unwrap();
     assert!(verify);
     assert_eq!(tree.count(), in_initial_elements_count + new_leaves_count);
 }
