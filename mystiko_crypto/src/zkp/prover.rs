@@ -15,7 +15,7 @@ pub struct ZKVerifyOptions<'a, Proof> {
     pub verification_key: &'a [u8],
 }
 
-pub trait ZKProver<P> {
+pub trait ZKProver<P>: Send + Sync {
     type Error;
 
     fn prove(&self, options: ZKProveOptions) -> Result<P, Self::Error>;
