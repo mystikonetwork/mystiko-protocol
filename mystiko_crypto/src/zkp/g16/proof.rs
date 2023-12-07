@@ -10,8 +10,8 @@ use zokrates_proof_systems::{Backend, G1Affine, G2Affine, G2AffineFq2, Scheme, G
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TypedBuilder)]
 pub struct G16Proof {
-    proof: Proof,
-    inputs: Vec<String>,
+    pub proof: Proof,
+    pub inputs: Vec<String>,
 }
 
 impl G16Proof {
