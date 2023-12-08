@@ -14,6 +14,21 @@ pub struct G16Proof {
     inputs: Vec<String>,
 }
 
+impl Default for G16Proof {
+    fn default() -> Self {
+        G16Proof::builder()
+            .proof(
+                Proof::builder()
+                    .a(G1Point::default())
+                    .b(G2Point::default())
+                    .c(G1Point::default())
+                    .build(),
+            )
+            .inputs(vec![])
+            .build()
+    }
+}
+
 impl G16Proof {
     pub fn verify(&self, vk: serde_json::Value) -> Result<bool, G16ProverError> {
         let vk_curve = vk
@@ -87,10 +102,16 @@ impl From<G16Proof> for ZokratesG16Proof {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TypedBuilder)]
 struct G1Point {
     pub x: String,
     pub y: String,
+}
+
+impl Default for G1Point {
+    fn default() -> Self {
+        G1Point::builder().x("0".to_string()).y("0".to_string()).build()
+    }
 }
 
 impl G1Point {
@@ -103,10 +124,19 @@ impl G1Point {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TypedBuilder)]
 struct G2Point {
     pub x: [String; 2],
     pub y: [String; 2],
+}
+
+impl Default for G2Point {
+    fn default() -> Self {
+        G2Point::builder()
+            .x(["0".to_string(), "0".to_string()])
+            .y(["0".to_string(), "0".to_string()])
+            .build()
+    }
 }
 
 impl G2Point {
@@ -128,7 +158,7 @@ impl G2Point {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TypedBuilder)]
 struct Proof {
     pub a: G1Point,
     pub b: G2Point,
