@@ -3589,7 +3589,7 @@ dependencies = [
 [[package]]
 name = "zokrates_abi"
 version = "0.1.9"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "serde",
  "serde_derive",
@@ -3600,8 +3600,8 @@ dependencies = [
 
 [[package]]
 name = "zokrates_analysis"
-version = "0.1.3"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.1.4"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "cfg-if 0.1.10",
  "lazy_static",
@@ -3619,8 +3619,8 @@ dependencies = [
 
 [[package]]
 name = "zokrates_ast"
-version = "0.1.7"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.1.8"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "ark-bls12-377",
  "byteorder",
@@ -3639,7 +3639,7 @@ dependencies = [
 [[package]]
 name = "zokrates_bellman"
 version = "0.1.3"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "bellman_ce",
  "getrandom",
@@ -3655,16 +3655,16 @@ dependencies = [
 
 [[package]]
 name = "zokrates_common"
-version = "0.1.3"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.1.4"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "zokrates_embed"
-version = "0.1.10"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.1.11"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "ark-bls12-377",
  "ark-bw6-761",
@@ -3682,8 +3682,8 @@ dependencies = [
 
 [[package]]
 name = "zokrates_field"
-version = "0.5.5"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.5.6"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3708,8 +3708,8 @@ dependencies = [
 
 [[package]]
 name = "zokrates_interpreter"
-version = "0.1.5"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.1.6"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "ark-bls12-377",
  "num 0.1.42",
@@ -3726,7 +3726,7 @@ dependencies = [
 [[package]]
 name = "zokrates_parser"
 version = "0.3.5"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "pest",
  "pest_derive",
@@ -3734,8 +3734,8 @@ dependencies = [
 
 [[package]]
 name = "zokrates_pest_ast"
-version = "0.3.3"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.3.4"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "from-pest",
  "lazy_static",
@@ -3746,8 +3746,8 @@ dependencies = [
 
 [[package]]
 name = "zokrates_proof_systems"
-version = "0.1.3"
-source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.7#c537a80930480fbc8c18af1c5d1b9194787d409c"
+version = "0.1.4"
+source = "git+https://github.com/Zokrates/ZoKrates?tag=0.8.8#157a824426e213fbcd05c74220c706095be1ee7a"
 dependencies = [
  "blake2 0.8.1",
  "byteorder",
