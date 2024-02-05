@@ -50,37 +50,37 @@ pub fn public_key_to_vec(pk: &PublicKey, compress: bool) -> Vec<u8> {
     pk.as_bytes().to_vec()
 }
 
-fn uncompressed_public_key_to_compressed(pk: &[u8]) -> Vec<u8> {
-    let encoded = EncodedPoint::from_bytes(pk).unwrap();
-    let point: AffinePoint = AffinePoint::from_encoded_point(&encoded).unwrap();
-    let res = point.to_encoded_point(true);
-    res.as_bytes().to_vec()
+fn uncompressed_public_key_to_compressed(pk: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    let encoded = EncodedPoint::from_bytes(pk).map_err(|_| CryptoError::EccEncodedPointError)?;
+    let option_point: Option<AffinePoint> = AffinePoint::from_encoded_point(&encoded).into();
+    let point = option_point.ok_or(CryptoError::EccPointConversionNoneError)?;
+    let enc_point = point.to_encoded_point(true);
+    Ok(enc_point.as_bytes().to_vec())
 }
 
-fn encrypt_derive_shared_secret(public_key_bytes: &[u8]) -> (Vec<u8>, Vec<u8>) {
+fn encrypt_derive_shared_secret(public_key_bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
     let mut rng = OsRng;
     let sk_a = SecretKey::random(&mut rng);
     let pk_a = sk_a.public_key();
     let pk_a = public_key_to_vec(&pk_a, false);
 
-    let pk_b = PublicKey::from_sec1_bytes(public_key_bytes).unwrap();
+    let pk_b = PublicKey::from_sec1_bytes(public_key_bytes)?;
     let shared = elliptic_curve::ecdh::diffie_hellman(sk_a.to_nonzero_scalar(), pk_b.as_affine());
     let shared_bytes = shared.raw_secret_bytes();
     let shared_bytes = shared_bytes.as_ref() as &[u8];
 
-    (pk_a, shared_bytes.to_vec())
+    Ok((pk_a, shared_bytes.to_vec()))
 }
 
-fn decrypt_derive_shared_secret(pk_a: &[u8], sk_b: &[u8]) -> Vec<u8> {
-    // todo check if failed
-    let public_key_a = PublicKey::from_sec1_bytes(pk_a).unwrap();
-    let secret_key_b = SecretKey::from_slice(sk_b).unwrap();
+fn decrypt_derive_shared_secret(pk_a: &[u8], sk_b: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    let public_key_a = PublicKey::from_sec1_bytes(pk_a)?;
+    let secret_key_b = SecretKey::from_slice(sk_b)?;
 
     let shared = elliptic_curve::ecdh::diffie_hellman(secret_key_b.to_nonzero_scalar(), public_key_a.as_affine());
 
     let shared_bytes = shared.raw_secret_bytes();
     let shared_bytes = shared_bytes.as_ref() as &[u8];
-    shared_bytes.to_vec()
+    Ok(shared_bytes.to_vec())
 }
 
 pub fn encrypt(public_key_bytes: &[u8], plain_data: &[u8]) -> Result<Vec<u8>, CryptoError> {
@@ -88,7 +88,7 @@ pub fn encrypt(public_key_bytes: &[u8], plain_data: &[u8]) -> Result<Vec<u8>, Cr
         return Err(CryptoError::KeyLengthError);
     }
 
-    let (ephemeral_public_key, shared_bytes) = encrypt_derive_shared_secret(public_key_bytes);
+    let (ephemeral_public_key, shared_bytes) = encrypt_derive_shared_secret(public_key_bytes)?;
 
     let shared_hash = sha512(shared_bytes.as_slice());
     let (encryption_key, mac_key) = shared_hash.split_at(32);
@@ -125,10 +125,27 @@ pub fn equal_const_time(b1: &[u8], b2: &[u8]) -> bool {
 
 pub fn decrypt(secret_key_bytes: &[u8], cipher_data: &[u8]) -> Result<Vec<u8>, CryptoError> {
     let ec_data = ECCryptoData::from_bytes(cipher_data)?;
-    let pk = uncompressed_public_key_to_compressed(ec_data.ephemeral_public_key.as_slice());
-    let shared_bytes = decrypt_derive_shared_secret(pk.as_slice(), secret_key_bytes);
+    let pk = uncompressed_public_key_to_compressed(ec_data.ephemeral_public_key.as_slice())?;
+    let shared_bytes = decrypt_derive_shared_secret(pk.as_slice(), secret_key_bytes)?;
+    let result = decrypt_data(&ec_data, shared_bytes.as_slice());
+    match result {
+        Ok(data) => Ok(data),
+        Err(err) => {
+            // Compatibility with nodejs eccrypto
+            // Attempt to remove leading zeros and decrypt again if the first attempt failed.
+            let first_non_zero_index = shared_bytes.iter().position(|&x| x != 0).unwrap_or(0);
+            let sub_shared_bytes = &shared_bytes[first_non_zero_index..];
+            if sub_shared_bytes.len() != shared_bytes.len() {
+                decrypt_data(&ec_data, sub_shared_bytes)
+            } else {
+                Err(err)
+            }
+        }
+    }
+}
 
-    let shared_hash = sha512(shared_bytes.as_slice());
+fn decrypt_data(ec_data: &ECCryptoData, shared_bytes: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    let shared_hash = sha512(shared_bytes);
     let (encryption_key, mac_key) = shared_hash.split_at(32);
     let mut data_to_mac = ec_data.iv.clone();
     data_to_mac.extend(ec_data.ephemeral_public_key.clone());
