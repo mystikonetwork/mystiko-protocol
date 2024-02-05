@@ -1,3 +1,4 @@
+use elliptic_curve::Error as EllipticCurveError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -20,6 +21,8 @@ pub enum SecretShareError {
 
 #[derive(Error, Debug)]
 pub enum CryptoError {
+    #[error(transparent)]
+    EllipticCurveError(#[from] EllipticCurveError),
     #[error("data length error")]
     DataLengthError,
     #[error("key length error")]
@@ -28,6 +31,10 @@ pub enum CryptoError {
     MacMismatchError,
     #[error("decrypt error {0}")]
     DecryptError(String),
+    #[error("ecc encoded point error")]
+    EccEncodedPointError,
+    #[error("ecc point conversion none error")]
+    EccPointConversionNoneError,
     #[error("internal error")]
     InternalError,
 }
