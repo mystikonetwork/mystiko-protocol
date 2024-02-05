@@ -66,7 +66,13 @@ async fn test_decrypt_compatible_with_js_by_leading_zeros() {
     use ff::hex;
     let sk = SecretKey::from_slice(b"98765432101234567890123456789012").unwrap();
     let text = hex::decode("e20a031ae3479c59b0a95119a5d06373e4177673e3b95f7189a456fee40a").unwrap();
-    let js_enc_data = hex::decode("db531f7f93fe850fbc2e2b28fcb0ebf5049c223ea8fb5d9cb9d937187bd6885fd188880970fbda4ce14406e83510c0539fbf06d69c86e927c247962312ac8a504bf14b0ef161250873c15b7cec79ad72b740414f721c89dbd906b36bbc394aa9b3e8037b561ac4e2b72e9f0f0444770a10e7e9fedf7045b25077ea8b31115b323a0c7278e4a9b66e6a8f6045e9147c3b38").unwrap();
+    let js_enc_data = hex::decode(
+        "db531f7f93fe850fbc2e2b28fcb0ebf5049c223ea8fb5d9cb9d937187bd6885fd1888809\
+        70fbda4ce14406e83510c0539fbf06d69c86e927c247962312ac8a504bf14b0ef16125087\
+        3c15b7cec79ad72b740414f721c89dbd906b36bbc394aa9b3e8037b561ac4e2b72e9f0f04\
+        44770a10e7e9fedf7045b25077ea8b31115b323a0c7278e4a9b66e6a8f6045e9147c3b38",
+    )
+    .unwrap();
     let dec_text = decrypt(sk.to_bytes().to_vec().as_slice(), js_enc_data.to_vec().as_slice()).unwrap();
     assert_eq!(dec_text, text);
 }
