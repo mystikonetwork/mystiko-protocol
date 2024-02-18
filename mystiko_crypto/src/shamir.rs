@@ -136,8 +136,13 @@ fn lagrange_interpolate(x: &BigUint, points: &[Point], prime: &BigUint) -> BigUi
 
         for j in 0..k {
             if j != i {
-                num_values.push(x.clone().to_bigint().unwrap() - points[j].clone().x.to_bigint().unwrap());
-                den_values.push(points[i].clone().x.to_bigint().unwrap() - points[j].clone().x.to_bigint().unwrap())
+                num_values.push(
+                    x.clone().to_bigint().unwrap_or_default() - points[j].clone().x.to_bigint().unwrap_or_default(),
+                );
+                den_values.push(
+                    points[i].clone().x.to_bigint().unwrap_or_default()
+                        - points[j].clone().x.to_bigint().unwrap_or_default(),
+                )
             }
         }
 
@@ -150,7 +155,7 @@ fn lagrange_interpolate(x: &BigUint, points: &[Point], prime: &BigUint) -> BigUi
     let mut num_values: Vec<BigInt> = vec![];
     for i in 0..k {
         let num = bigint_mod_floor(
-            &(nums[i].clone() * den.clone() * points[i].y.clone().to_bigint().unwrap()),
+            &(nums[i].clone() * den.clone() * points[i].y.clone().to_bigint().unwrap_or_default()),
             &prime_bigint,
         );
         num_values.push(div_mod(&num, &dens[i], &prime_bigint));
@@ -158,5 +163,5 @@ fn lagrange_interpolate(x: &BigUint, points: &[Point], prime: &BigUint) -> BigUi
     let num = sum(num_values.as_slice());
     bigint_mod_floor(&(div_mod(&num, &den, &prime_bigint) + &prime_bigint), &prime_bigint)
         .to_biguint()
-        .unwrap()
+        .unwrap_or_default()
 }
