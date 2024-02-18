@@ -1,5 +1,5 @@
 use crate::constants::FIELD_SIZE;
-use crate::error::MerkleTreeError;
+use crate::error::{CryptoError, MerkleTreeError};
 use crate::hash::{keccak256, poseidon_fr};
 use anyhow::Result;
 use ff::*;
@@ -32,7 +32,7 @@ impl MerkleTree {
             return Err(MerkleTreeError::MerkleTreeIsFull);
         }
 
-        let zeros = calc_zeros(zero_element, &max_levels);
+        let zeros = calc_zeros(zero_element, &max_levels)?;
         let layers: Vec<Vec<BigUint>> = vec![initial_elements];
 
         let mut s = Self {
@@ -41,11 +41,11 @@ impl MerkleTree {
             zeros,
             layers,
         };
-        s.rebuild();
+        s.rebuild()?;
         Ok(s)
     }
 
-    fn rebuild(&mut self) {
+    fn rebuild(&mut self) -> Result<(), MerkleTreeError> {
         self.layers.reserve(self.max_levels as usize);
         for level in 1..(self.max_levels + 1) as usize {
             let mut new_layer = vec![];
@@ -61,11 +61,12 @@ impl MerkleTree {
                         &self.zeros[level - 1]
                     };
 
-                    new_layer.push(hash_two(first, second));
+                    new_layer.push(hash_two(first, second)?);
                 }
             }
             self.layers.push(new_layer);
         }
+        Ok(())
     }
 
     pub fn root(&self) -> BigUint {
@@ -101,7 +102,7 @@ impl MerkleTree {
                 let ph = hash_two(
                     &self.layers[level - 1][index * 2],
                     &self.layers[level - 1][index * 2 + 1],
-                );
+                )?;
 
                 self.update_layers(level, index, ph);
                 i = index;
@@ -136,7 +137,7 @@ impl MerkleTree {
         if !self.layers[0].is_empty() {
             let index = self.layers[0].len() - 1;
             let elem = self.layers[0][index].clone();
-            self.update(index, elem).unwrap();
+            self.update(index, elem)?;
         }
 
         Ok(())
@@ -167,7 +168,7 @@ impl MerkleTree {
                 &self.zeros[level - 1]
             };
 
-            let ph = hash_two(first, second);
+            let ph = hash_two(first, second)?;
             self.update_layers(level, current_index, ph);
         }
         Ok(())
@@ -218,17 +219,19 @@ pub fn calc_default_zero_element() -> BigUint {
     seed_bigint.mod_floor(&FIELD_SIZE)
 }
 
-pub fn hash_two(first: &BigUint, second: &BigUint) -> BigUint {
-    let b1: Fr = Fr::from_str(&first.to_string()).unwrap();
-    let b2: Fr = Fr::from_str(&second.to_string()).unwrap();
-    poseidon_fr(&[b1, b2])
+pub fn hash_two(first: &BigUint, second: &BigUint) -> Result<BigUint, MerkleTreeError> {
+    let b1: Fr = Fr::from_str(&first.to_string())
+        .ok_or_else(|| MerkleTreeError::from(CryptoError::PoseidonFrFromBigUintError))?;
+    let b2: Fr = Fr::from_str(&second.to_string())
+        .ok_or_else(|| MerkleTreeError::from(CryptoError::PoseidonFrFromBigUintError))?;
+    poseidon_fr(&[b1, b2]).map_err(|e| e.into())
 }
 
-pub fn calc_zeros(first_zero: BigUint, levels: &u32) -> Vec<BigUint> {
+pub fn calc_zeros(first_zero: BigUint, levels: &u32) -> Result<Vec<BigUint>, MerkleTreeError> {
     let mut z: Vec<BigUint> = vec![];
     z.push(first_zero);
     for i in 1..(levels + 1) as usize {
-        z.push(hash_two(&z[i - 1], &z[i - 1]));
+        z.push(hash_two(&z[i - 1], &z[i - 1])?);
     }
-    z
+    Ok(z)
 }

@@ -43,4 +43,6 @@ pub enum ProtocolKeyError {
     ImportEncryptPublicKeyError,
     #[error("import encrypt secret key error")]
     ImportEncryptSecretKeyError,
+    #[error(transparent)]
+    ECCryptoError(#[from] CryptoError),
 }

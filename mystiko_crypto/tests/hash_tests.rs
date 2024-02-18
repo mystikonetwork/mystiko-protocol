@@ -47,7 +47,7 @@ async fn test_poseidon_compatible_with_js() {
         10,
     )
     .unwrap();
-    let hash = poseidon(&[b1, b2]);
+    let hash = poseidon(&[b1, b2]).unwrap();
     assert_eq!(hash, expect_hash);
 }
 
@@ -57,15 +57,16 @@ async fn test_poseidon_bigint() {
     let b1 = random_biguint(size[0] as usize, &FIELD_SIZE);
     let size = random_bytes(1);
     let b2 = random_biguint(size[0] as usize, &FIELD_SIZE);
-    poseidon_bigint(&[b1, b2]);
+    let result = poseidon_bigint(&[b1, b2]);
+    assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_check_sum() {
-    let hash1 = checksum("hello world", None);
-    let hash2 = checksum("Mystiko is awesome", Some(""));
-    let hash3 = checksum("Mystiko is awesome", Some("P@ssw0rd"));
-    let hash4 = checksum("hello world", None);
+    let hash1 = checksum("hello world", None).unwrap();
+    let hash2 = checksum("Mystiko is awesome", Some("")).unwrap();
+    let hash3 = checksum("Mystiko is awesome", Some("P@ssw0rd")).unwrap();
+    let hash4 = checksum("hello world", None).unwrap();
     assert_ne!(hash1, hash2);
     assert_ne!(hash2, hash3);
     assert_ne!(hash3, hash4);

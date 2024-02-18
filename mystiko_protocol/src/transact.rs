@@ -54,28 +54,26 @@ impl Transaction {
         Ok(TransactionProof::builder().proof(proof).zk_input(zk_input).build())
     }
 
-    fn build_auditing_data(&self) -> AuditingKeys {
+    fn build_auditing_data(&self) -> Result<AuditingKeys, ProtocolError> {
         let random_auditing_sk = if let Some(key) = self.random_auditing_secret_key {
             key
         } else {
-            ecies::generate_secret_key()
+            ecies::generate_secret_key()?
         };
 
         let random_auditing_pk = ecies::public_key(&random_auditing_sk);
-        let (unpacked_random_k_x, unpacked_random_k_y) = ecies::unpack_public_key(&random_auditing_pk);
-        let keys = self
-            .auditor_public_keys
-            .iter()
-            .map(|pk| {
-                let (unpacked_key_x, unpacked_key_y) = ecies::unpack_public_key(pk);
-                AuditingUnpackedPublicKey::builder()
-                    .x_signs(is_neg(&unpacked_key_x))
-                    .x(unpacked_key_x)
-                    .y(unpacked_key_y)
-                    .build()
-            })
-            .collect::<Vec<_>>();
-        AuditingKeys::builder()
+        let (unpacked_random_k_x, unpacked_random_k_y) = ecies::unpack_public_key(&random_auditing_pk)?;
+        let keys = self.auditor_public_keys.iter().try_fold(Vec::new(), |mut acc, pk| {
+            let (unpacked_key_x, unpacked_key_y) = ecies::unpack_public_key(pk)?;
+            let auditing_key = AuditingUnpackedPublicKey::builder()
+                .x_signs(is_neg(&unpacked_key_x))
+                .x(unpacked_key_x)
+                .y(unpacked_key_y)
+                .build();
+            acc.push(auditing_key);
+            Ok::<Vec<AuditingUnpackedPublicKey>, ProtocolError>(acc)
+        })?;
+        Ok(AuditingKeys::builder()
             .random_sk(random_auditing_sk)
             .random_pk(random_auditing_pk)
             .random_unpacked_pk(
@@ -86,7 +84,7 @@ impl Transaction {
                     .build(),
             )
             .auditors(keys)
-            .build()
+            .build())
     }
 }
 
@@ -134,7 +132,7 @@ impl TransactionZKInput {
             .iter()
             .map(|input| input.decrypt(&t.sig_pk))
             .collect::<Result<Vec<_>, _>>()?;
-        let auditing_keys = t.build_auditing_data();
+        let auditing_keys = t.build_auditing_data()?;
         let shares = t
             .inputs
             .iter()
@@ -239,8 +237,8 @@ impl TransactionCommitmentInput {
             .random_r(note.random_r)
             .random_s(note.random_s)
             .amount(note.amount)
-            .nullifier(compute_nullifier(&self.sk_verify, &note.random_p))
-            .sig_hash(compute_sig_pk_hash(sig_pk, &self.sk_verify))
+            .nullifier(compute_nullifier(&self.sk_verify, &note.random_p)?)
+            .sig_hash(compute_sig_pk_hash(sig_pk, &self.sk_verify)?)
             .path_indices(path)
             .build())
     }
@@ -255,7 +253,7 @@ impl TransactionCommitmentInput {
         let p_ys = s_shares.shares.iter().map(|p| p.y.clone()).collect::<Vec<_>>();
         let mut encrypted_shares = vec![];
         for (share, pk) in s_shares.shares.iter().zip(auditor_public_keys.iter()) {
-            let encrypted_share = ecies::encrypt(&share.y, pk, &auditing_keys.random_sk);
+            let encrypted_share = ecies::encrypt(&share.y, pk, &auditing_keys.random_sk)?;
             encrypted_shares.push(encrypted_share);
         }
         Ok(TransactionCommitmentShares::builder()

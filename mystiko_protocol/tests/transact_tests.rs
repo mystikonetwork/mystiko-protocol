@@ -123,14 +123,14 @@ fn generate_transaction(
         .sub(relayer_fee_amount.clone());
 
     let random_auditing_secret_key = if generate_auditing_key.unwrap_or(false) {
-        Some(ecies::generate_secret_key())
+        Some(ecies::generate_secret_key().unwrap())
     } else {
         None
     };
 
     let mut auditor_public_keys: Vec<AuditingPk> = vec![];
     for _ in 0..NUM_OF_AUDITORS {
-        let pk = ecies::public_key(&ecies::generate_secret_key());
+        let pk = ecies::public_key(&ecies::generate_secret_key().unwrap());
         auditor_public_keys.push(pk);
     }
 

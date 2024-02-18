@@ -48,14 +48,14 @@ impl Note {
             .build())
     }
 
-    pub fn to_vec(&self) -> Vec<u8> {
+    pub fn to_vec(&self) -> Result<Vec<u8>, ProtocolError> {
         let mut note_bytes = vec![];
 
         note_bytes.extend(&self.random_p);
         note_bytes.extend(&self.random_r);
         note_bytes.extend(&self.random_s);
-        note_bytes.extend(biguint_to_32_bytes(&self.amount));
-        note_bytes
+        note_bytes.extend(biguint_to_32_bytes(&self.amount)?);
+        Ok(note_bytes)
     }
 
     pub fn from_vec(note_bytes: Vec<u8>) -> Result<Self, ProtocolError> {
@@ -115,10 +115,10 @@ impl Commitment {
         };
 
         let shielded_address = ShieldedAddress::from_public_key(&pk_verify, &pk_enc);
-        let encrypted_note = encrypt_asymmetric(&pk_enc, note.to_vec().as_slice())?;
+        let encrypted_note = encrypt_asymmetric(&pk_enc, note.to_vec()?.as_slice())?;
         let pk_big = BigUint::from_bytes_le(&pk_verify);
-        let k = poseidon(&[pk_big, note.random_p_big(), note.random_r_big()]);
-        let commitment_hash = poseidon(&[k.clone(), note.amount.clone(), note.random_s_big()]);
+        let k = poseidon(&[pk_big, note.random_p_big(), note.random_r_big()])?;
+        let commitment_hash = poseidon(&[k.clone(), note.amount.clone(), note.random_s_big()])?;
 
         let commitment = Self {
             note,

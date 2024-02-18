@@ -47,7 +47,7 @@ impl<'a> Rollup<'a> {
         let path_indices = path_indices_number(path_indices);
         let (_, path_elements) = leaf_path.0.split_at(rollup_height);
         let path_elements: Vec<String> = path_elements.iter().map(|n| n.to_string()).collect();
-        let leaves_hash = calc_leaves_hash(new_leaves.as_slice());
+        let leaves_hash = calc_leaves_hash(new_leaves.as_slice())?;
         let new_leaves: Vec<String> = new_leaves.iter().map(|n| n.to_string()).collect();
 
         let array: Vec<serde_json::Value> = vec![
@@ -85,11 +85,16 @@ fn path_indices_number(path_indices: &[usize]) -> BigUint {
     })
 }
 
-fn calc_leaves_hash(leaves: &[BigUint]) -> BigUint {
-    let leaf_buffer: Vec<u8> = leaves.iter().flat_map(biguint_to_be_32_bytes).collect();
+fn calc_leaves_hash(leaves: &[BigUint]) -> Result<BigUint, ProtocolError> {
+    let leaf_buffer = leaves.iter().try_fold(Vec::new(), |mut acc, leaf| {
+        biguint_to_be_32_bytes(leaf).map(|bytes| {
+            acc.extend(bytes);
+            acc
+        })
+    })?;
     let hash = keccak256(leaf_buffer.as_slice());
     let hash = BigUint::from_bytes_be(&hash);
-    mod_floor(&hash, &FIELD_SIZE)
+    Ok(mod_floor(&hash, &FIELD_SIZE))
 }
 
 #[cfg(test)]
@@ -134,7 +139,7 @@ mod tests {
             10,
         )
         .expect("failed to parse expect_hash");
-        let leaves_hash = calc_leaves_hash(&leaves);
+        let leaves_hash = calc_leaves_hash(&leaves).unwrap();
         assert_eq!(expect_hash, leaves_hash);
     }
 }

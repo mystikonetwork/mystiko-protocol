@@ -16,13 +16,13 @@ pub fn verification_secret_key(raw_secret_key: &VerifySk) -> Result<VerifySk, Pr
     if sk > *FIELD_SIZE {
         return Err(ProtocolKeyError::ImportVerifySecretKeyError);
     }
-    Ok(biguint_to_32_bytes(&sk))
+    biguint_to_32_bytes(&sk).map_err(|e| e.into())
 }
 
 pub fn verification_public_key(raw_secret_key: &VerifySk) -> Result<VerifyPk, ProtocolKeyError> {
     let pk = PrivateKey::import(raw_secret_key.to_vec()).map_err(|_| ProtocolKeyError::ImportVerifySecretKeyError)?;
     let point = pk.public();
-    Ok(fr_to_bytes(&point.x))
+    fr_to_bytes(&point.x).map_err(|e| e.into())
 }
 
 pub fn encryption_secret_key(raw_secret_key: &EncSk) -> EncSk {

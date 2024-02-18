@@ -1,6 +1,8 @@
 use crate::constants::FIELD_SIZE;
-use crate::utils::fr_to_bigint;
+use crate::error::CryptoError;
+use crate::utils::fr_to_biguint;
 use crate::utils::mod_floor;
+use anyhow::Result;
 use blake2::Blake2b512;
 use ff::PrimeField;
 use hmac::{Hmac, Mac};
@@ -14,22 +16,23 @@ lazy_static! {
     static ref G_POSEIDON_INSTANCE: Poseidon = Poseidon::new();
 }
 
-pub fn poseidon_bigint(arr: &[BigUint]) -> BigUint {
-    let arr_fr: Vec<Fr> = arr.iter().map(|n| Fr::from_str(&n.to_string()).unwrap()).collect();
-
-    poseidon_fr(arr_fr.as_slice())
+pub fn poseidon_bigint(arr: &[BigUint]) -> Result<BigUint, CryptoError> {
+    let arr_fr: Result<Vec<Fr>, _> = arr
+        .iter()
+        .map(|n| Fr::from_str(&n.to_string()).ok_or(CryptoError::PoseidonFrFromBigUintError))
+        .collect();
+    arr_fr.and_then(|frs| poseidon_fr(frs.as_slice()))
 }
 
-pub fn poseidon(arr: &[BigUint]) -> BigUint {
-    assert!(arr.len() < 7);
-    let hash = poseidon_bigint(arr);
-    assert!(hash < FIELD_SIZE.clone());
-    hash
+pub fn poseidon(arr: &[BigUint]) -> Result<BigUint, CryptoError> {
+    poseidon_bigint(arr)
 }
 
-pub fn poseidon_fr(arr: &[Fr]) -> BigUint {
-    let ph = G_POSEIDON_INSTANCE.hash(arr.to_vec()).unwrap();
-    fr_to_bigint(&ph)
+pub fn poseidon_fr(arr: &[Fr]) -> Result<BigUint, CryptoError> {
+    let ph = G_POSEIDON_INSTANCE
+        .hash(arr.to_vec())
+        .map_err(|_| CryptoError::PoseidonFrHashError)?;
+    fr_to_biguint(&ph)
 }
 
 pub fn sha512(msg: &[u8]) -> Vec<u8> {
@@ -50,21 +53,21 @@ pub fn sha256_mod(msg: &[u8]) -> BigUint {
     mod_floor(&hash, &FIELD_SIZE)
 }
 
-pub fn hmac_sha256(key: &[u8], msg: &[u8]) -> Vec<u8> {
+pub fn hmac_sha256(key: &[u8], msg: &[u8]) -> Result<Vec<u8>, CryptoError> {
     type HmacSha256 = Hmac<Sha256>;
-    let mut hmac = HmacSha256::new_from_slice(key).unwrap();
+    let mut hmac = HmacSha256::new_from_slice(key).map_err(|_| CryptoError::HmacSha256Error)?;
     hmac.update(msg);
-    hmac.finalize().into_bytes().to_vec()
+    Ok(hmac.finalize().into_bytes().to_vec())
 }
 
-pub fn hmac_sha512(key: &[u8], msg: &[u8]) -> Vec<u8> {
+pub fn hmac_sha512(key: &[u8], msg: &[u8]) -> Result<Vec<u8>, CryptoError> {
     type HmacSha512 = Hmac<Sha512>;
-    let mut hmac = HmacSha512::new_from_slice(key).unwrap();
+    let mut hmac = HmacSha512::new_from_slice(key).map_err(|_| CryptoError::HmacSha512Error)?;
     hmac.update(msg);
-    hmac.finalize().into_bytes().to_vec()
+    Ok(hmac.finalize().into_bytes().to_vec())
 }
 
-pub fn checksum(data: &str, salt: Option<&str>) -> String {
+pub fn checksum(data: &str, salt: Option<&str>) -> Result<String, CryptoError> {
     let salt_str = match salt {
         Some(a) => {
             if a.is_empty() {
@@ -76,8 +79,8 @@ pub fn checksum(data: &str, salt: Option<&str>) -> String {
         _ => "mystiko",
     };
 
-    let h = hmac_sha512(salt_str.as_bytes(), data.as_bytes());
-    ff::hex::encode(h)
+    let h = hmac_sha512(salt_str.as_bytes(), data.as_bytes())?;
+    Ok(ff::hex::encode(h))
 }
 
 pub fn blake2b_512(msg: &str) -> Vec<u8> {

@@ -75,9 +75,7 @@ fn encrypt_derive_shared_secret(public_key_bytes: &[u8]) -> Result<(Vec<u8>, Vec
 fn decrypt_derive_shared_secret(pk_a: &[u8], sk_b: &[u8]) -> Result<Vec<u8>, CryptoError> {
     let public_key_a = PublicKey::from_sec1_bytes(pk_a)?;
     let secret_key_b = SecretKey::from_slice(sk_b)?;
-
     let shared = elliptic_curve::ecdh::diffie_hellman(secret_key_b.to_nonzero_scalar(), public_key_a.as_affine());
-
     let shared_bytes = shared.raw_secret_bytes();
     let shared_bytes = shared_bytes.as_ref() as &[u8];
     Ok(shared_bytes.to_vec())
@@ -89,18 +87,14 @@ pub fn encrypt(public_key_bytes: &[u8], plain_data: &[u8]) -> Result<Vec<u8>, Cr
     }
 
     let (ephemeral_public_key, shared_bytes) = encrypt_derive_shared_secret(public_key_bytes)?;
-
     let shared_hash = sha512(shared_bytes.as_slice());
     let (encryption_key, mac_key) = shared_hash.split_at(32);
-
     let iv = random_bytes(16);
     let mut data_to_mac = iv.clone();
     let cipher_text = aes_cbc::encrypt(&iv, encryption_key, plain_data);
     data_to_mac.extend(ephemeral_public_key.clone());
     data_to_mac.extend(cipher_text.clone());
-
-    let mac = hmac_sha256(mac_key, data_to_mac.as_slice());
-
+    let mac = hmac_sha256(mac_key, data_to_mac.as_slice())?;
     let ec_data = ECCryptoData {
         iv,
         ephemeral_public_key,
@@ -150,7 +144,7 @@ fn decrypt_data(ec_data: &ECCryptoData, shared_bytes: &[u8]) -> Result<Vec<u8>, 
     let mut data_to_mac = ec_data.iv.clone();
     data_to_mac.extend(ec_data.ephemeral_public_key.clone());
     data_to_mac.extend(ec_data.cipher_text.clone());
-    let real_mac = hmac_sha256(mac_key, data_to_mac.as_slice());
+    let real_mac = hmac_sha256(mac_key, data_to_mac.as_slice())?;
     if !equal_const_time(real_mac.as_slice(), ec_data.mac.as_slice()) {
         return Err(CryptoError::MacMismatchError);
     }

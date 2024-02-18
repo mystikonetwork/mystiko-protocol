@@ -18,7 +18,7 @@ async fn test_secret_key() {
         10,
     )
     .unwrap();
-    let sk = biguint_to_32_bytes(&sk);
+    let sk = biguint_to_32_bytes(&sk).unwrap();
     let pk = public_key(&sk);
     assert_eq!(
         BigUint::from_bytes_le(&pk),
@@ -29,7 +29,7 @@ async fn test_secret_key() {
         .unwrap()
     );
 
-    let unpacked_pk = unpack_public_key(&pk);
+    let unpacked_pk = unpack_public_key(&pk).unwrap();
     assert_eq!(
         BigUint::from_bytes_le(&unpacked_pk.0),
         BigUint::parse_bytes(
@@ -52,9 +52,8 @@ async fn test_secret_key() {
         10,
     )
     .unwrap();
-    let sk2 = biguint_to_32_bytes(&sk2);
+    let sk2 = biguint_to_32_bytes(&sk2).unwrap();
     let pk2 = public_key(&sk2);
-    // let unpacked_pk = unpack_public_key(&pk);
     assert_eq!(
         BigUint::from_bytes_le(&pk2),
         BigUint::parse_bytes(
@@ -64,7 +63,7 @@ async fn test_secret_key() {
         .unwrap()
     );
 
-    let unpacked_pk2 = unpack_public_key(&pk2);
+    let unpacked_pk2 = unpack_public_key(&pk2).unwrap();
     assert_eq!(
         BigUint::from_bytes_le(&unpacked_pk2.0),
         BigUint::parse_bytes(
@@ -86,38 +85,38 @@ async fn test_secret_key() {
 #[tokio::test]
 async fn test_unpack_public_key() {
     for _ in 0..10 {
-        let common_sk = generate_secret_key();
+        let common_sk = generate_secret_key().unwrap();
         let common_pk = public_key(&common_sk);
-        let (x, y) = unpack_public_key(&common_pk);
-        let pk = public_key_from_unpack_point(&x, &y);
+        let (x, y) = unpack_public_key(&common_pk).unwrap();
+        let pk = public_key_from_unpack_point(&x, &y).unwrap();
         assert_eq!(pk, common_pk);
     }
 }
 
 #[tokio::test]
 async fn test_encrypt() {
-    let common_sk = generate_secret_key();
+    let common_sk = generate_secret_key().unwrap();
     let common_pk = public_key(&common_sk);
-    let sk = generate_secret_key();
+    let sk = generate_secret_key().unwrap();
     let pk = public_key(&sk);
 
     let message = random_biguint(32, &FIELD_SIZE);
-    let encrypted = encrypt(&message, &pk, &common_sk);
-    let decrypted = decrypt(&encrypted, &sk, &common_pk);
+    let encrypted = encrypt(&message, &pk, &common_sk).unwrap();
+    let decrypted = decrypt(&encrypted, &sk, &common_pk).unwrap();
     assert_eq!(message, decrypted);
 
     let message = BigUint::zero();
-    let encrypted = encrypt(&message, &pk, &common_sk);
-    let decrypted = decrypt(&encrypted, &sk, &common_pk);
+    let encrypted = encrypt(&message, &pk, &common_sk).unwrap();
+    let decrypted = decrypt(&encrypted, &sk, &common_pk).unwrap();
     assert_eq!(message, decrypted);
 
     let message = FIELD_SIZE.clone() - BigUint::one();
-    let encrypted = encrypt(&message, &pk, &common_sk);
-    let decrypted = decrypt(&encrypted, &sk, &common_pk);
+    let encrypted = encrypt(&message, &pk, &common_sk).unwrap();
+    let decrypted = decrypt(&encrypted, &sk, &common_pk).unwrap();
     assert_eq!(message, decrypted);
 
     let message = FIELD_SIZE.clone().shr(1u32);
-    let encrypted = encrypt(&message, &pk, &common_sk);
-    let decrypted = decrypt(&encrypted, &sk, &common_pk);
+    let encrypted = encrypt(&message, &pk, &common_sk).unwrap();
+    let decrypted = decrypt(&encrypted, &sk, &common_pk).unwrap();
     assert_eq!(message, decrypted);
 }
