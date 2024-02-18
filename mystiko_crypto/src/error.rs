@@ -1,7 +1,7 @@
 use elliptic_curve::Error as EllipticCurveError;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum MerkleTreeError {
     #[error("merkle tree is full")]
     MerkleTreeIsFull,
@@ -9,6 +9,8 @@ pub enum MerkleTreeError {
     IndexOutOfBounds,
     #[error("unknown error")]
     Unknown,
+    #[error(transparent)]
+    CryptoError(#[from] CryptoError),
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -35,6 +37,22 @@ pub enum CryptoError {
     EccEncodedPointError,
     #[error("ecc point conversion none error")]
     EccPointConversionNoneError,
+    #[error("poseidon fr from big uint error")]
+    PoseidonFrFromBigUintError,
+    #[error("poseidon fr to big uint error")]
+    PoseidonFrToBigUintError,
+    #[error("poseidon fr hash error")]
+    PoseidonFrHashError,
+    #[error("hmac sha256 error")]
+    HmacSha256Error,
+    #[error("hmac sha512 error")]
+    HmacSha512Error,
+    #[error("big uint to 32 bytes error")]
+    BigUintTo32BytesError,
+    #[error("invalid key size")]
+    InvalidKeySize,
+    #[error("decompression failed")]
+    DecompressionFailed,
     #[error("internal error")]
     InternalError,
 }

@@ -20,7 +20,7 @@ async fn test_nullifier_compatible_with_js() {
 
     let sk = verification_secret_key(&raw_key).unwrap();
     let random_p = b"1234567812345678";
-    let sn = compute_nullifier(&sk, random_p);
+    let sn = compute_nullifier(&sk, random_p).unwrap();
     assert_eq!(sn, expect_sn);
 }
 
@@ -37,7 +37,7 @@ async fn test_sig_pk_hash_compatible_with_js() {
     )
     .unwrap();
     let sk = verification_secret_key(&raw_key).unwrap();
-    let sig_pk_hash = compute_sig_pk_hash(&sig_pk, &sk);
+    let sig_pk_hash = compute_sig_pk_hash(&sig_pk, &sk).unwrap();
     assert_eq!(sig_pk_hash, expect_sig_pk_hash);
 }
 

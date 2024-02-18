@@ -17,7 +17,7 @@ async fn test_random() {
     let a = random_biguint(0, &FIELD_SIZE);
     assert_eq!(a, BigUint::from(0u32));
 
-    let be = biguint_to_be_32_bytes(&a);
+    let be = biguint_to_be_32_bytes(&a).unwrap();
     assert_eq!(be.len(), 32);
 
     let b = random_bytes(10);
