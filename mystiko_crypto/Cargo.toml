@@ -8,16 +8,16 @@ default = []
 zkp = ["dep:pest-ast", "dep:zokrates_common", "dep:zokrates_ast", "dep:zokrates_field", "dep:zokrates_interpreter", "dep:zokrates_abi", "dep:zokrates_proof_systems", "dep:zokrates_bellman"]
 
 [dependencies]
-ff = {package="ff_ce" , version="0.11", features = ["derive"]}
+ff = { package = "ff_ce", version = "0.11", features = ["derive"] }
 lazy_static = { version = "1.4.0" }
-num-bigint = { version = "0.4.3" ,features = ["rand"]}
+num-bigint = { version = "0.4.3", features = ["rand"] }
 num-integer = { version = "0.1.45" }
 num-traits = { version = "0.2.15" }
 anyhow = { version = "1.0.69" }
 
 # utils
 rand = { version = "0.8", package = "rand" }
-rand_core = { version = "0.6.4", features = ["getrandom" ] }
+rand_core = { version = "0.6.4", features = ["getrandom"] }
 serde = { version = "1.0.152" }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 typed-builder = { version = "0.15.2" }
@@ -29,18 +29,18 @@ thiserror = { version = "1.0.38" }
 aes = { version = "0.8.2" }
 babyjubjub-rs = { version = "0.0.10", features = ["default"] }
 base64 = { version = "0.21.0" }
-cbc = { version = "0.1.2",features = ["std"]  }
-elliptic-curve = { version = "0.13.5", features = [ "ecdh" ]}
+cbc = { version = "0.1.2", features = ["std"] }
+elliptic-curve = { version = "0.13.5", features = ["ecdh"] }
 generic-array = { version = "0.14.6" }
 k256 = { version = "0.13.1" }
 
 #hash
 poseidon-rs = { version = "0.0.8" }
-sha2 = { version = "0.10.6"}
+sha2 = { version = "0.10.6" }
 sha3 = { version = "0.10.6" }
-blake2 = { version = "0.10.6"}
-hmac = { version = "0.12.1"}
-md5 = { version = "0.7.0"}
+blake2 = { version = "0.10.6" }
+hmac = { version = "0.12.1" }
+md5 = { version = "0.7.0" }
 
 pest-ast = { version = "=0.3.3", optional = true }
 zokrates_common = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.8", optional = true }
@@ -52,7 +52,7 @@ zokrates_proof_systems = { git = "https://github.com/Zokrates/ZoKrates", tag = "
 zokrates_bellman = { git = "https://github.com/Zokrates/ZoKrates", tag = "0.8.8", features = ["multicore"], optional = true }
 
 [dev-dependencies]
-mystiko_fs = { git = "ssh://git@github.com/mystikonetwork/mystiko-backend.git", rev = "906cb0f" }
+mystiko_fs = { git = "https://github.com/mystikonetwork/mystiko-backend", rev = "d2d641c" }
 tokio = { version = "1.26.0", features = ["macros", "rt", "full", "test-util"] }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 
