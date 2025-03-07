@@ -26,7 +26,7 @@ pub struct RollupProof<Proof> {
     pub leaves_hash: BigUint,
 }
 
-impl<'a> Rollup<'a> {
+impl Rollup<'_> {
     pub fn prove<Prover, Proof>(&mut self, prover: Arc<Prover>) -> Result<RollupProof<Proof>, ProtocolError>
     where
         Prover: ZKProver<Proof>,
@@ -81,7 +81,7 @@ fn is_power_of_two(a_number: usize) -> bool {
 
 fn path_indices_number(path_indices: &[usize]) -> BigUint {
     path_indices.iter().rev().fold(BigUint::zero(), |acc, &x| {
-        acc << 1 | if x != 0 { BigUint::one() } else { BigUint::zero() }
+        (acc << 1) | if x != 0 { BigUint::one() } else { BigUint::zero() }
     })
 }
 
