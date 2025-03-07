@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ff = {package="ff_ce" , version="0.11", features = ["derive"]}
+ff = { package = "ff_ce", version = "0.11", features = ["derive"] }
 lazy_static = { version = "1.4.0" }
 num-bigint = { version = "0.4.3" }
 num-traits = { version = "0.2.15" }
@@ -29,9 +29,9 @@ k256 = { version = "0.13.1" }
 mystiko_crypto = { version = "0.1.0", path = "../mystiko_crypto", features = ["zkp"] }
 
 [dev-dependencies]
-ethers-core  = { version = "2.0.4" }
-ethers-signers   = { version = "2.0.4" }
-mystiko_fs = { git = "ssh://git@github.com/mystikonetwork/mystiko-backend.git", rev = "906cb0f" }
+ethers-core = { version = "2.0.4" }
+ethers-signers = { version = "2.0.4" }
+mystiko_fs = { git = "https://github.com/mystikonetwork/mystiko-backend", rev = "d2d641c" }
 tokio = { version = "1.26.0", features = ["macros", "rt", "test-util"] }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
