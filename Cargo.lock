@@ -1973,7 +1973,7 @@ dependencies = [
 [[package]]
 name = "mystiko_fs"
 version = "0.1.0"
-source = "git+ssh://git@github.com/mystikonetwork/mystiko-backend.git?rev=906cb0f#906cb0fc5ba16da04e6bd9127a7f4a3298e95886"
+source = "git+https://github.com/mystikonetwork/mystiko-backend?rev=d2d641c#d2d641c0c69d353a673cd302443cf7ebc1b79944"
 dependencies = [
  "anyhow",
  "async-compression",
